@@ -239,7 +239,7 @@ function buildCloudBlobs(){ const r=rnd(13);
         F(top,ring[k],ring[k2],[.96,.97,.99]); F(bot,ring[k2],ring[k],[.89,.93,.96]); } } } }
 
 // ---------------- wade (all 15 activities) ----------------
-const SKIN=[.96,.8,.66], SHIRT=[.92,.87,.75], SHIRTC=[.93,.35,.26], PANTS=[.72,.68,.6],
+const SKIN=[.96,.8,.66], SHIRT=[.92,.87,.75], SHIRTC=[.93,.35,.26], PANTS=[.52,.49,.45],
       HAIR=[.38,.28,.19], BEARD=[.4,.3,.2];
 function buildWade(ax,az,act,t,fireOn,wood,near){
   const yaw=Math.atan2(near.x-ax, near.z-az);
@@ -274,13 +274,14 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   const limb=(a,b,w,col)=>prism(a.x,a.y,a.z,b.x,b.y,b.z,w,col);
   limb(W(-2.5,hipY,0),knL,2.2,PANTS); limb(W(2.5,hipY,0),knR,2.2,PANTS);
   limb(knL,ftL,1.9,PANTS); limb(knR,ftR,1.9,PANTS);
-  box(hip.x,hip.y,hip.z, 5.8,4,4,PANTS,yaw);
-  prism(hip.x,hip.y,hip.z, torsoTop.x,torsoTop.y,torsoTop.z, 4.2, SHIRT);
+  box(hip.x,hip.y,hip.z, 5,3.6,3.8,PANTS,yaw);
+  prism(hip.x,hip.y,hip.z, torsoTop.x,torsoTop.y,torsoTop.z, 3.1, SHIRT);
   box(torsoTop.x,torsoTop.y-2.5,torsoTop.z, 8.6,2.6,4.6, SHIRTC,yaw);
   box(torsoTop.x,torsoTop.y+1.4,torsoTop.z, 5.6,3.2,4.6, SHIRT,yaw);
   let head;
   if(lying){ head=curled?W(2.5,hipY+.8,-14):W(0,hipY+1.8,-14); }
   else { head={x:torsoTop.x, y:torsoTop.y+6, z:torsoTop.z}; }
+  prism(torsoTop.x,torsoTop.y+1.5,torsoTop.z, head.x,head.y-1.5,head.z, 1.4, SKIN);
   box(head.x,head.y,head.z, 5,5.6,5,SKIN,yaw);
   box(head.x,head.y+2.6,head.z-(lying?-1:1)*.6, 5.4,2,5.4,HAIR,yaw);
   const fwx=sn*2.55, fwz=cs*2.55;
@@ -305,12 +306,15 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   else if(act==='signal'){ hL=W(-3.5,hipY+7,0); hR=W(1.5,hipY+11,4);
     prism(hR.x,hR.y,hR.z, hR.x+sn*7,hR.y+.5,hR.z+cs*7, .9,[.72,.6,.3]); }
   else { hL=W(-3.5,hipY+7,0); hR=W(3.5,hipY+7,0); }
-  limb(shL,hL,1.7,SHIRT); limb(shR,hR,1.7,SHIRT);
+  limb(shL,hL,2,SHIRT); limb(shR,hR,2,SHIRT);
+  box(hL.x,hL.y,hL.z, 1.9,1.9,1.9,SKIN,yaw); box(hR.x,hR.y,hR.z, 1.9,1.9,1.9,SKIN,yaw);
   if(act==='fish'){ const rx=(hL.x+hR.x)/2, ry=(hL.y+hR.y)/2, rz=(hL.z+hR.z)/2;
     const tx=rx+sn*60, tz=rz+cs*60, ty=2;
     prism(rx,ry,rz, tx,ty+14,tz, .7,[.55,.4,.26]); }
   if(act==='cook'){ const rx=(hL.x+hR.x)/2, ry=(hL.y+hR.y)/2, rz=(hL.z+hR.z)/2;
     prism(rx,ry,rz, rx+sn*14,ry+3,rz+cs*14, .5,[.5,.38,.24]); }
+  box(ftL.x+sn*1,ftL.y-.2,ftL.z+cs*1, 2.4,1.5,3.4,[.3,.24,.19],yaw);
+  box(ftR.x+sn*1,ftR.y-.2,ftR.z+cs*1, 2.4,1.5,3.4,[.3,.24,.19],yaw);
   // blob shadow grounds him (lit like terrain, just darker)
   const sc=lying?[9,16]:[7.5,7.5], shy=groundY(ax,az)+.25, shc=V(ax,shy,az);
   for(let k=0;k<8;k++){ const a=k/8*Math.PI*2, a2=(k+1)/8*Math.PI*2;
