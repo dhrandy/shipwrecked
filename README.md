@@ -36,14 +36,14 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 ```yaml
 services:
   shipwrecked:
-    build: https://github.com/YOURUSER/shipwrecked.git#main
-    image: shipwrecked:0.1.0
+    build: https://github.com/dhrandy/shipwrecked.git#main
+    image: shipwrecked:0.1.1
     container_name: shipwrecked
     restart: unless-stopped
     ports:
       - "8647:8647"
     environment:
-      TZ: ${TZ:-UTC}
+      TZ: ${TZ:-America/New_York}
       SIM_SPEED: ${SIM_SPEED:-1}
     volumes:
       - shipwrecked-data:/data
@@ -58,7 +58,7 @@ in the compose file or in your Docker manager's environment settings.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `TZ` | `UTC` | Island timezone - day/night, holidays, and routines follow it |
+| `TZ` | `America/New_York` | Island timezone - day/night, holidays, and routines follow it |
 | `SIM_SPEED` | `1` | Story speed multiplier (try `60` to watch a day fly by) |
 | `SHIPWRECKED_DB` | `/data/shipwrecked.db` | Where the island's memory lives |
 

@@ -10,7 +10,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 import engine
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 

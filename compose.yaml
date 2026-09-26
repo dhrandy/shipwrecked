@@ -11,7 +11,7 @@ services:
     environment:
       # No .env file is needed. The ${VAR:-default} values work as-is;
       # change them here or in your Docker manager's environment settings.
-      TZ: ${TZ:-UTC}                       # island time: day/night, holidays, moon follow it
+      TZ: ${TZ:-America/New_York}                       # island time: day/night, holidays, moon follow it
       SIM_SPEED: ${SIM_SPEED:-1}           # 1 = real time; higher = faster story (for demos)
       SHIPWRECKED_DB: ${SHIPWRECKED_DB:-/data/shipwrecked.db}
     volumes:
