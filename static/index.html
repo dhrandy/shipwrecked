@@ -239,7 +239,7 @@ function buildCloudBlobs(){ const r=rnd(13);
         F(top,ring[k],ring[k2],[.96,.97,.99]); F(bot,ring[k2],ring[k],[.89,.93,.96]); } } } }
 
 // ---------------- wade (all 15 activities) ----------------
-const SKIN=[.96,.8,.66], SHIRT=[.92,.87,.75], SHIRTC=[.93,.35,.26], PANTS=[.48,.44,.39],
+const SKIN=[.96,.8,.66], SHIRT=[.62,.71,.78], SHIRTC=[.93,.35,.26], PANTS=[.48,.44,.39],
       HAIR=[.38,.28,.19], BEARD=[.4,.3,.2], DARK=[.24,.16,.12], NOSEC=[.93,.71,.58], SHOE=[.3,.24,.19];
 // smooth-shaded primitives: verts carry baked normals, packDynamic uses them
 function Vs(x,y,z,nx,ny,nz){ verts.push([x,y,z,nx,ny,nz]); return verts.length-1; }
@@ -300,7 +300,7 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   limb(knL,ftL,1.45,PANTS); limb(knR,ftR,1.45,PANTS);
   sph(hip.x,hip.y,hip.z, 4.0,3.4,3.2, PANTS);
   const lp=(a,b,f)=>({x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f, z:a.z+(b.z-a.z)*f});
-  const b0=lp(hip,torsoTop,.30), b1=lp(hip,torsoTop,.58), b2=lp(hip,torsoTop,.73);
+  const b0=lp(hip,torsoTop,.18), b1=lp(hip,torsoTop,.58), b2=lp(hip,torsoTop,.73);
   limb(b0,torsoTop,3.3,SHIRT);
   caps(b1.x,b1.y,b1.z, b2.x,b2.y,b2.z, 3.55, SHIRTC);
   sph(torsoTop.x,torsoTop.y,torsoTop.z, 3.4,3.2,3.2, SHIRT);

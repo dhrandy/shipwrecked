@@ -37,7 +37,7 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 services:
   shipwrecked:
     build: https://github.com/dhrandy/shipwrecked.git#main
-    image: shipwrecked:0.3.0
+    image: shipwrecked:0.3.1
     container_name: shipwrecked
     restart: unless-stopped
     ports:
