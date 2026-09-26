@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shipwrecked - a tiny island story</title>
+<style>
+  :root { --ink:#f4ead5; --dim:#c8b98f; --panel:rgba(12,20,32,.82); }
+  * { box-sizing:border-box; margin:0; }
+  html,body { height:100%; overflow:hidden; background:#0b1c2c;
+    font-family:'Courier New', ui-monospace, monospace; color:var(--ink); }
+  canvas#scene { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .hud { position:fixed; z-index:5; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+  #title { top:10px; left:14px; }
+  #title h1 { font-size:20px; letter-spacing:3px; }
+  #title .sub { font-size:12px; color:var(--dim); margin-top:2px; }
+  #meta { top:10px; right:14px; text-align:right; font-size:12px; color:var(--dim); line-height:1.5; }
+  #ticker { left:0; right:0; bottom:0; padding:8px 14px; font-size:13px;
+    background:linear-gradient(transparent, rgba(5,10,18,.85)); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; }
+  #logbtn { bottom:44px; right:14px; background:var(--panel); border:1px solid #3a4a5e;
+    color:var(--ink); font:inherit; font-size:12px; padding:6px 10px; border-radius:8px; cursor:pointer; }
+  #drawer { left:0; right:0; bottom:0; max-height:62%; background:var(--panel);
+    border-top:1px solid #3a4a5e; transform:translateY(100%); transition:transform .25s;
+    display:flex; flex-direction:column; z-index:9; }
+  #drawer.open { transform:translateY(0); }
+  #drawer header { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
+  #drawer header b { letter-spacing:2px; font-size:13px; }
+  #drawer header button { background:none; border:none; color:var(--ink); font:inherit; font-size:18px; cursor:pointer; }
+  #drawer .cols { display:flex; gap:14px; overflow:auto; padding:0 14px 14px; }
+  #drawer .col { flex:1; min-width:0; }
+  #drawer h3 { font-size:11px; color:var(--dim); letter-spacing:1px; margin:6px 0; }
+  #drawer .ev { font-size:12px; padding:5px 0; border-bottom:1px dashed #2a3a4e; line-height:1.45; }
+  #drawer .ev time { color:var(--dim); font-size:11px; display:block; }
+  #drawer .ev.story { color:#ffd98a; } #drawer .ev.milestone { color:#9ae6a0; }
+  #drawer .ev.holiday { color:#f0a0c0; } #drawer .ev.event { color:#a0c8f0; }
+  .needs { font-size:11px; color:var(--dim); }
+  .needs .bar { display:inline-block; width:70px; height:7px; background:#223144;
+    border-radius:4px; overflow:hidden; vertical-align:middle; margin:0 6px 0 2px; }
+  .needs .bar i { display:block; height:100%; background:#e0b35c; }
+  #catchup { position:fixed; inset:0; z-index:20; display:none; align-items:center;
+    justify-content:center; background:rgba(4,8,14,.72); padding:16px; }
+  #catchup.open { display:flex; }
+  #catchup .card { background:var(--panel); border:1px solid #3a4a5e; border-radius:12px;
+    max-width:560px; width:100%; max-height:78vh; overflow:auto; padding:18px; }
+  #catchup h2 { font-size:15px; letter-spacing:1px; margin-bottom:10px; }
+  #catchup .ev { font-size:13px; padding:6px 0; border-bottom:1px dashed #2a3a4e; line-height:1.5; }
+  #catchup .ev time { color:var(--dim); font-size:11px; display:block; }
+  #catchup .ev.story { color:#ffd98a; } #catchup .ev.milestone { color:#9ae6a0; }
+  #catchup .ev.holiday { color:#f0a0c0; } #catchup .ev.event { color:#a0c8f0; }
+  #catchup button { margin-top:12px; width:100%; padding:10px; font:inherit; font-size:13px;
+    letter-spacing:2px; background:#e0b35c; border:none; border-radius:8px; color:#1a1206; cursor:pointer; }
+  @media (max-width:640px){
+    #title h1 { font-size:16px; } #meta { font-size:11px; }
+    #drawer .cols { flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div class="hud" id="title"><h1>SHIPWRECKED</h1><div class="sub" id="chap">Day 1 · Landfall</div></div>
+<div class="hud" id="meta"></div>
+<div class="hud" id="ticker"></div>
+<button class="hud" id="logbtn">STORY LOG</button>
+<div class="hud" id="drawer">
+  <header><b>THE STORY SO FAR</b><button id="closebtn" aria-label="close">×</button></header>
+  <div class="cols">
+    <div class="col"><h3>LOG</h3><div id="loglist"></div></div>
+    <div class="col"><h3>WADE</h3><div id="stats"></div><h3>MILESTONES</h3><div id="miles"></div></div>
+  </div>
+</div>
+<div id="catchup"><div class="card"><h2 id="cuhead">WHILE YOU WERE AWAY</h2><div id="culist"></div>
+  <button id="cubtn">BACK TO THE ISLAND</button></div></div>
+
+<script>
+"use strict";
+const cv = document.getElementById('scene'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize(){ DPR = Math.min(devicePixelRatio||1, 2);
+  W = innerWidth; H = innerHeight; cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize', resize); resize();
+
+let S = null;            // server state
+let lastVisit = null;
+try { lastVisit = localStorage.getItem('shipwrecked_last'); } catch(e){}
+
+const PHASES = {
+  dawn: {sky:['#3a4a72','#c97b4a','#f2c98a'], sea:['#27435f','#3f6b85'], sun:.12},
+  day:  {sky:['#4f9ad4','#8ec8e8','#cfeaf2'], sea:['#1f6f9f','#3f9fc4'], sun:.5},
+  dusk: {sky:['#2c2a55','#a8544f','#e8935a'], sea:['#23395c','#4a5a78'], sun:.1},
+  night:{sky:['#060a18','#0e1a33','#16233f'], sea:['#0a1626','#122a40'], sun:0},
+};
+
+function stars(t){ if(!S||S.phase!=='night')return; ctx.save();
+  for(let i=0;i<90;i++){ const x=(i*97.13)%W, y=(i*57.7)%(H*.5);
+    const tw=.4+.6*Math.abs(Math.sin(t*.001+i));
+    ctx.fillStyle=`rgba(255,255,240,${tw*.8})`; ctx.fillRect(x,y,1.6,1.6);} ctx.restore(); }
+
+function sunMoon(t){ if(!S)return; const ph=PHASES[S.phase];
+  const hy=H*.52;
+  if(S.phase==='night'){ const mx=W*.78, my=H*.14, r=16+(S.moon.illum*10);
+    ctx.fillStyle='#e8e4cf'; ctx.beginPath(); ctx.arc(mx,my,r,0,7); ctx.fill();
+    if(S.moon.illum<0.95){ const off=r*1.7*(1-S.moon.illum);
+      ctx.fillStyle='rgba(8,14,30,.92)'; ctx.beginPath();
+      ctx.arc(mx-off, my-1, r*.94, 0, 7); ctx.fill(); } }
+  else { const p=ph.sun, sx=W*.5+(p-.5)*W*.7, sy=hy-(Math.sin(p*Math.PI))*H*.32;
+    const g=ctx.createRadialGradient(sx,sy,4,sx,sy,60);
+    g.addColorStop(0,'rgba(255,236,170,.95)'); g.addColorStop(1,'rgba(255,236,170,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,60,0,7); ctx.fill();
+    ctx.fillStyle='#ffe9a8'; ctx.beginPath(); ctx.arc(sx,sy,16,0,7); ctx.fill(); } }
+
+let clouds = Array.from({length:5},(_,i)=>({x:Math.random(),y:.06+i*.06,s:.5+Math.random(),v:.008+Math.random()*.01}));
+function drawClouds(dt){ if(!S)return; const c = S.phase==='night'?'rgba(120,140,170,.18)':'rgba(255,255,255,.75)';
+  for(const cl of clouds){ cl.x+=cl.v*dt*.001; if(cl.x>1.2)cl.x=-.2;
+    const x=cl.x*W, y=cl.y*H, r=26*cl.s; ctx.fillStyle=c;
+    for(const [ox,oy,rr] of [[0,0,1],[r*.8,4,.75],[-r*.8,5,.7],[r*.3,-r*.4,.65]]){
+      ctx.beginPath(); ctx.arc(x+ox,y+oy,r*rr,0,7); ctx.fill(); } } }
+
+function sea(t){ const hy=H*.52, ph=PHASES[S?S.phase:'day'];
+  const g=ctx.createLinearGradient(0,hy,0,H); g.addColorStop(0,ph.sea[0]); g.addColorStop(1,ph.sea[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,hy,W,H-hy);
+  ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1.5;
+  for(let r=0;r<6;r++){ ctx.beginPath();
+    const yy=hy+14+r*((H-hy-20)/6);
+    for(let x=0;x<=W;x+=8){ const w=Math.sin(x*.02+t*.0016+r*1.7)*3;
+      x===0?ctx.moveTo(x,yy+w):ctx.lineTo(x,yy+w); }
+    ctx.globalAlpha=.5-r*.07; ctx.stroke(); ctx.globalAlpha=1; } }
+
+function island(t){ const cx=W*.55, cy=H*.62, rx=Math.min(W<640?W*.44:W*.3,240), ry=rx*.22;
+  ctx.fillStyle='#d8b878'; ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#c8a45e'; ctx.beginPath(); ctx.ellipse(cx,cy+4,rx*.96,ry*.8,0,Math.PI,0); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=2; ctx.beginPath();
+  for(let x=-rx;x<=rx;x+=6){ const yy=cy+Math.sin(x*.09+t*.002)*2;
+    x===-rx?ctx.moveTo(cx+x,yy):ctx.lineTo(cx+x,yy); } ctx.stroke();
+  return {cx,cy,rx,ry}; }
+
+function palm(x,y,t,decor){ ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle='#7a5230'; ctx.lineWidth=7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(8,-34,4,-58); ctx.stroke();
+  for(let i=0;i<6;i++){ const a=-Math.PI*.15-i*.5+Math.sin(t*.0012+i)*.06;
+    ctx.strokeStyle='#3f7a3a'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(4,-58);
+    ctx.quadraticCurveTo(4+Math.cos(a)*26,-58+Math.sin(a)*16-8, 4+Math.cos(a)*44,-58+Math.sin(a)*30+6);
+    ctx.stroke(); }
+  ctx.fillStyle='#6b4a2a';
+  ctx.beginPath(); ctx.arc(0,-52,4,0,7); ctx.arc(9,-50,4,0,7); ctx.fill();
+  if(decor==='christmas'){ for(let i=0;i<7;i++){ const a=-Math.PI*.2-i*.42;
+      ctx.fillStyle=['#e84a4a','#f0d050','#5aa0e8'][i%3];
+      ctx.beginPath(); ctx.arc(4+Math.cos(a)*26,-58+Math.sin(a)*18-6,2.4,0,7); ctx.fill(); } }
+  ctx.restore(); }
+
+function fire(x,y,t){ ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle='#5a3a22'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-9,0); ctx.lineTo(9,-4); ctx.moveTo(9,0); ctx.lineTo(-9,-4); ctx.stroke();
+  const f=1+Math.sin(t*.02)*.25;
+  const g=ctx.createRadialGradient(0,-6,2,0,-6,26);
+  g.addColorStop(0,'rgba(255,180,70,.5)'); g.addColorStop(1,'rgba(255,180,70,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,-6,26,0,7); ctx.fill();
+  ctx.fillStyle='rgba(240,140,40,.95)'; ctx.beginPath();
+  ctx.moveTo(-7,-2); ctx.quadraticCurveTo(0,-20*f,7,-2); ctx.fill();
+  ctx.fillStyle='rgba(255,220,120,.95)'; ctx.beginPath();
+  ctx.moveTo(-3.5,-2); ctx.quadraticCurveTo(0,-11*f,3.5,-2); ctx.fill();
+  ctx.restore(); }
+
+function raft(x,y,prog){ if(prog<=0)return; ctx.save(); ctx.translate(x,y);
+  const logs=Math.max(1,Math.round(prog/20));
+  ctx.strokeStyle='#8a6a42'; ctx.lineWidth=4; ctx.lineCap='round';
+  for(let i=0;i<logs;i++){ ctx.beginPath(); ctx.moveTo(-18+i*4,-i*3); ctx.lineTo(18-i*4,-i*3); ctx.stroke(); }
+  if(prog>=60){ ctx.strokeStyle='#6a4a2a'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(0,-logs*3); ctx.lineTo(0,-logs*3-22); ctx.stroke();
+    ctx.fillStyle='#d8cfb8'; ctx.beginPath();
+    ctx.moveTo(0,-logs*3-22); ctx.lineTo(14,-logs*3-8); ctx.lineTo(0,-logs*3-6); ctx.fill(); }
+  ctx.restore(); }
+
+// Wade: small bearded castaway, pose per activity
+function wade(x,y,t,act,away){ if(away)return; ctx.save(); ctx.translate(x,y); ctx.scale(1.45,1.45);
+  const bob=(act==='jog')?Math.abs(Math.sin(t*.012))*4:Math.sin(t*.002)*1.2;
+  ctx.translate(0,-bob);
+  const skin='#e0a878', shirt='#c4503f', pants='#7a6a4a', beard='#8a8078';
+  if(act==='sleep'||act==='nap'){ ctx.rotate(0);
+    ctx.fillStyle=pants; ctx.fillRect(-2,-6,16,5);
+    ctx.fillStyle=shirt; ctx.fillRect(-12,-6,10,5);
+    ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(-15,-5,4,0,7); ctx.fill();
+    ctx.fillStyle=beard; ctx.beginPath(); ctx.arc(-16,-3,2.6,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.8)'; ctx.font='9px monospace';
+    ctx.fillText('z',-22,-10-Math.abs(Math.sin(t*.002))*6); ctx.restore(); return; }
+  // legs
+  const lp=(act==='jog')?Math.sin(t*.03)*5:0;
+  ctx.strokeStyle=pants; ctx.lineWidth=3.4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-3+lp,0); ctx.moveTo(0,-10); ctx.lineTo(3-lp,0); ctx.stroke();
+  // body
+  ctx.fillStyle=shirt; ctx.fillRect(-4,-20,8,11);
+  // arms
+  ctx.strokeStyle=skin; ctx.lineWidth=3;
+  const armA = act==='fish'? -.9 : act==='signal'? -2.2 : act==='jog'? Math.sin(t*.03)*.7 : Math.sin(t*.003)*.15;
+  ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(Math.cos(armA)*9, -18+Math.sin(armA)*9+6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(-Math.cos(armA)*7, -18+Math.sin(armA)*7+7); ctx.stroke();
+  // head + beard + hat
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(0,-25,5,0,7); ctx.fill();
+  ctx.fillStyle=beard; ctx.beginPath(); ctx.arc(0,-22.4,4.2,.15*Math.PI,.85*Math.PI); ctx.fill();
+  ctx.fillStyle='#b0925a'; ctx.beginPath(); ctx.ellipse(0,-29,6.4,2.2,0,0,7); ctx.fill();
+  ctx.fillRect(-3.6,-33,7.2,4);
+  if(act==='fish'){ ctx.strokeStyle='#5a4a33'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.moveTo(6,-22); ctx.lineTo(26,-40); ctx.stroke();
+    ctx.strokeStyle='rgba(230,230,230,.7)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(26,-40); ctx.quadraticCurveTo(30,-20+Math.sin(t*.004)*3, 26,-6); ctx.stroke(); }
+  if(act==='signal'){ ctx.strokeStyle='#c8b060'; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.moveTo(6,-26); ctx.lineTo(16,-30); ctx.stroke(); }
+  if(act==='raft_work'||act==='gather_wood'){ ctx.fillStyle='#8a6a42';
+    ctx.fillRect(4,-16,10,4); }
+  ctx.restore(); }
+
+function thoughtBubble(x,y,text){ if(!text)return; ctx.save();
+  ctx.font='12px Courier New, monospace';
+  const w=Math.min(ctx.measureText(text).width+20, 240);
+  ctx.fillStyle='rgba(255,255,255,.92)'; ctx.strokeStyle='#999'; ctx.lineWidth=1;
+  const bx=Math.min(Math.max(x-w/2, 8), W-w-8), by=y-64;
+  ctx.beginPath(); ctx.roundRect(bx,by,w,24,9); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-4,by+30,3,0,7); ctx.arc(x+2,by+38,2,0,7); ctx.fill();
+  ctx.fillStyle='#222'; ctx.textAlign='center';
+  ctx.fillText(text.length>34?text.slice(0,33)+'…':text, bx+w/2, by+16); ctx.restore(); }
+
+// event overlays, keyed by SPECIALS names; shown while fresh (<12 min old)
+function overlay(t, name, start){ const el=(t-start)/1000;
+  const hy=H*.52;
+  if(name==='ship'){ const x=W-(el*28)%(W+300); ctx.fillStyle='#2a3242';
+    ctx.fillRect(x,hy-26,90,18); ctx.fillRect(x+30,hy-40,26,14);
+    ctx.fillStyle='#e8e0c8'; ctx.fillRect(x+34,hy-36,18,8); }
+  if(name==='plane'){ const x=(el*90)%(W+200)-100, y=H*.1+Math.sin(el)*8;
+    ctx.fillStyle='#c8ccd4'; ctx.fillRect(x,y,26,5); ctx.fillRect(x+8,y-6,6,14); }
+  if(name==='shark'){ const cx=W*.55, cy=H*.66, r=Math.min(W*.34,280);
+    const a=el*.5; const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*.28;
+    ctx.fillStyle='#5a6a78'; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+6,y-11); ctx.lineTo(x+12,y); ctx.fill(); }
+  if(name==='seagull'){ const x=(el*60)%(W+160)-80, y=H*.22+Math.sin(el*2)*10;
+    ctx.strokeStyle='#eee'; ctx.lineWidth=2;
+    const f=Math.sin(el*10)*5; ctx.beginPath();
+    ctx.moveTo(x-8,y-f); ctx.quadraticCurveTo(x,y+3,x+8,y-f); ctx.stroke(); }
+  if(name==='shooting_star'){ const x=W*.8-el*160, y=H*.06+el*40; if(x>-40){
+    ctx.strokeStyle='rgba(255,255,220,.8)'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+24,y-7); ctx.stroke(); } }
+  if(name==='whale'){ const x=W*.2, sp=Math.abs(Math.sin(el*.7));
+    ctx.strokeStyle='rgba(220,235,245,.7)'; ctx.lineWidth=2;
+    for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x+i*5-5,hy);
+      ctx.quadraticCurveTo(x+i*8-8,hy-30*sp,x+i*12-10,hy-38*sp); ctx.stroke(); } }
+  if(name==='dolphin'){ for(let i=0;i<3;i++){ const ph=el*2+i*1.3, x=W*.3+i*60;
+      const y=H*.6-Math.abs(Math.sin(ph))*30;
+      ctx.strokeStyle='#7a9ab0'; ctx.lineWidth=3; ctx.beginPath();
+      ctx.arc(x,y+14,14,-.3,Math.PI-.3,true); ctx.stroke(); } }
+  if(name==='turtle'){ const x=W*.32, y=H*.64+Math.sin(el)*2;
+    ctx.fillStyle='#4a7a52'; ctx.beginPath(); ctx.ellipse(x,y,10,5,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+11,y-2,3.4,0,7); ctx.fill(); }
+  if(name==='fireflies' && S.phase==='night'){ for(let i=0;i<12;i++){
+      const x=W*.3+((i*53)%200)+Math.sin(t*.001+i*2)*16, y=H*.55+((i*31)%60)+Math.cos(t*.0013+i)*10;
+      ctx.fillStyle=`rgba(220,255,140,${.3+.5*Math.abs(Math.sin(t*.002+i))})`;
+      ctx.beginPath(); ctx.arc(x,y,1.8,0,7); ctx.fill(); } }
+}
+
+function weatherFx(t){ if(!S)return; const w=S.weather;
+  if(w==='rain'||w==='storm'){ ctx.strokeStyle='rgba(170,200,230,.5)'; ctx.lineWidth=1;
+    const n=w==='storm'?90:45;
+    for(let i=0;i<n;i++){ const x=(i*73+t*.6)%W, y=(i*97+t*1.1)%H;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-3,y+9); ctx.stroke(); } }
+  if(w==='storm' && Math.random()<.006){ ctx.fillStyle='rgba(255,255,255,.85)';
+    ctx.fillRect(0,0,W,H*.5); }
+  if(w==='cloudy'||w==='rain'||w==='storm'){ ctx.fillStyle=
+      w==='storm'?'rgba(30,34,48,.5)':'rgba(90,100,120,.25)';
+    ctx.fillRect(0,0,W,H*.5); } }
+
+let last = performance.now();
+function frame(t){ requestAnimationFrame(frame); const dt=t-last; last=t;
+  const ph=PHASES[S?S.phase:'day'];
+  const g=ctx.createLinearGradient(0,0,0,H*.6);
+  g.addColorStop(0,ph.sky[0]); g.addColorStop(.7,ph.sky[1]); g.addColorStop(1,ph.sky[2]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  stars(t); sunMoon(t); drawClouds(dt);
+  // holiday sky bits
+  if(S && S.holidays.includes('july4') && S.phase==='night'){
+    for(let i=0;i<3;i++){ const fx=W*(.3+.2*i), fy=H*.15, p=(t*.001+i)%1;
+      for(let k=0;k<10;k++){ const a=k*.63;
+        ctx.fillStyle=['#f66','#fe6','#6ef'][i];
+        ctx.globalAlpha=1-p; ctx.beginPath();
+        ctx.arc(fx+Math.cos(a)*p*40, fy+Math.sin(a)*p*40,1.6,0,7); ctx.fill(); ctx.globalAlpha=1; } } }
+  sea(t);
+  const isl=island(t);
+  if(S){ // tide shifts the shoreline a touch
+    palm(isl.cx+isl.rx*.42, isl.cy-2, t, S.holidays.includes('christmas')?'christmas':null);
+    if(S.holidays.includes('halloween')){ ctx.fillStyle='#e88030';
+      ctx.beginPath(); ctx.arc(isl.cx-isl.rx*.5, isl.cy-6, 8, 0, 7); ctx.fill();
+      ctx.fillStyle='#3a2a10'; ctx.fillRect(isl.cx-isl.rx*.5-4, isl.cy-9, 2.4,2.4);
+      ctx.fillRect(isl.cx-isl.rx*.5+2, isl.cy-9, 2.4,2.4); }
+    if(S.world.fire_lit || S.phase==='night' || S.activity==='cook')
+      fire(isl.cx-20, isl.cy+6, t);
+    raft(isl.cx-isl.rx*.55, isl.cy+10, S.world.raft_progress);
+    // Wade's spot depends on activity
+    const spots={fish:[isl.cx+isl.rx*.72, isl.cy-4], jog:[isl.cx+Math.sin(t*.004)*isl.rx*.5, isl.cy+8],
+      sleep:[isl.cx-34, isl.cy+2], nap:[isl.cx+isl.rx*.34, isl.cy+4],
+      cook:[isl.cx-30, isl.cy-4], tend_fire:[isl.cx-30, isl.cy-4],
+      signal:[isl.cx-isl.rx*.6, isl.cy-4], raft_work:[isl.cx-isl.rx*.5, isl.cy+2],
+      gather_wood:[isl.cx-isl.rx*.35, isl.cy+8], sandcastle:[isl.cx+isl.rx*.1, isl.cy+10],
+      coconut:[isl.cx+isl.rx*.4, isl.cy+2], write_bottle:[isl.cx-isl.rx*.1, isl.cy+6],
+      stargaze:[isl.cx+isl.rx*.05, isl.cy+4], bathe:[isl.cx-isl.rx*.85, isl.cy+14],
+      stand:[isl.cx, isl.cy+4]};
+    const p=spots[S.activity]||spots.stand;
+    wade(p[0], p[1], t, S.activity, S.away);
+    if(S.away){ // raft on the horizon
+      const rx=W*.2+Math.sin(t*.0004)*30; raft(rx, H*.5+Math.sin(t*.001)*3, 100);
+      wade(rx, H*.5-6+Math.sin(t*.001)*3, t, 'stand', false); }
+    thoughtBubble(p[0], p[1]-52, S.thought);
+    // fresh event overlays
+    const now=Date.now();
+    for(const ev of (S.recent||[])){
+      if(ev.data && ev.data.overlay && now-ev.ts*1000 < 12*60*1000)
+        overlay(t, ev.data.overlay, ev.ts*1000);
+    }
+  }
+  weatherFx(t);
+}
+requestAnimationFrame(frame);
+
+// ---------------- UI ----------------
+const $=id=>document.getElementById(id);
+function fmt(iso){ const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{weekday:'short'})+' '+
+         d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function renderUI(){
+  if(!S)return;
+  $('chap').textContent=`Day ${S.island_day} · Cycle ${S.cycle} · ${S.chapter}`;
+  $('meta').innerHTML=`${S.phase} · ${S.weather} · tide ${S.tide}<br>${S.moon.name}`;
+  const latest=(S.recent||[]).slice(-1)[0];
+  $('ticker').textContent = latest? latest.text : 'A tiny island. One guy. Somewhere, a story is starting.';
+  $('loglist').innerHTML=(S.recent||[]).slice().reverse().map(e=>
+    `<div class="ev ${e.kind}"><time>${fmt(e.iso)}</time>${esc(e.text)}</div>`).join('');
+  const n=S.needs;
+  $('stats').innerHTML=`<div class="needs">`+
+    ['hunger','energy','mood','boredom','loneliness'].map(k=>
+      `${k} <span class="bar"><i style="width:${n[k]}%"></i></span>${n[k]}`).join('<br>')+
+    `<br><br>doing: ${esc(S.activity_label)}<br>raft ${S.world.raft_progress}% · wood ${S.world.wood} · coconuts ${S.world.coconuts}`+
+    (S.state_line?`<br><br><span style="opacity:.6">${esc(S.state_line)}</span>`:'')+`</div>`;
+  $('miles').innerHTML=(S.milestones||[]).map(m=>
+    `<div class="ev milestone">★ ${esc(m.label)}<time>day ${m.day}, cycle ${m.cycle}</time></div>`).join('')||
+    '<div class="ev">No firsts yet. Wade is just getting started.</div>';
+  if(S.catchup && S.catchup.length>0){
+    $('cuhead').textContent=`WHILE YOU WERE AWAY (${S.catchup.length})`;
+    $('culist').innerHTML=S.catchup.map(e=>
+      `<div class="ev ${e.kind}"><time>${fmt(e.iso)}</time>${esc(e.text)}</div>`).join('');
+    $('catchup').classList.add('open');
+  }
+}
+
+async function poll(){
+  try{
+    const q=lastVisit?`?since=${encodeURIComponent(lastVisit)}`:'';
+    const r=await fetch('/api/state'+q);
+    S=await r.json();
+    try{ localStorage.setItem('shipwrecked_last', new Date().toISOString()); }catch(e){}
+    lastVisit=null; // catch-up only on first load of a visit
+    renderUI();
+  }catch(e){ /* island weathered the disconnect; try again next tick */ }
+}
+poll(); setInterval(poll, 30000);
+
+$('logbtn').onclick=()=>$('drawer').classList.toggle('open');
+$('closebtn').onclick=()=>$('drawer').classList.remove('open');
+$('cubtn').onclick=()=>$('catchup').classList.remove('open');
+</script>
+</body>
+</html>

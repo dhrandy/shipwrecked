@@ -1,0 +1,20 @@
+services:
+  shipwrecked:
+    build: .
+    # or build straight from the repo once it's on GitHub:
+    # build: https://github.com/YOURUSER/shipwrecked.git#main
+    image: shipwrecked:0.1.0
+    container_name: shipwrecked
+    restart: unless-stopped
+    ports:
+      - "8647:8647"   # non-common port; change the left side to whatever you like
+    environment:
+      # No .env file is needed. The ${VAR:-default} values work as-is;
+      # change them here or in your Docker manager's environment settings.
+      TZ: ${TZ:-UTC}                       # island time: day/night, holidays, moon follow it
+      SIM_SPEED: ${SIM_SPEED:-1}           # 1 = real time; higher = faster story (for demos)
+      SHIPWRECKED_DB: ${SHIPWRECKED_DB:-/data/shipwrecked.db}
+    volumes:
+      - shipwrecked-data:/data                # the island's whole memory lives here
+volumes:
+  shipwrecked-data:
