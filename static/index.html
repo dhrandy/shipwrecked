@@ -282,6 +282,11 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   let lean=lying?0:sitting?.15:kneeling?.5:bending?.85:0;
   if(jogging) hipY+=Math.abs(Math.sin(t*.014))*2.5;
   const step=jogging?Math.sin(t*.014):0;
+  // contact shadow: squashed dark discs hugging the terrain so he reads grounded
+  const shd=(sx,sz,rx,rz)=>{ const sy=groundY(sx,sz)+.28; sph(sx,sy,sz, rx,.55,rz, [.34,.28,.19], 10,4); };
+  if(lying){ shd(ax+6*sn,az+6*cs,5.5,6); shd(ax-7*sn,az-7*cs,5,6); }
+  else if(sitting){ shd(ax+2.5*sn,az+2.5*cs,6,6.5); shd(ax+7.5*sn,az+7.5*cs,4.5,4.5); }
+  else shd(ax,az,5.5,5.5);
   const hip=W(0,hipY,0);
   const torsoTop=lying?(curled?W(1.5,hipY+.6,-10.5):W(0,hipY+1,-10.5)):W(0,hipY+10,-10*lean);
   const shL=lying?(curled?W(-.5,hipY+1.2,-9.5):W(-3,hipY+1.6,-9.5)):W(-4.3,hipY+9.4,-9*lean);
@@ -372,7 +377,7 @@ function buildFirePit(t){ const fx0=FIRE.x,fz0=FIRE.z, gy=groundY(fx0,fz0);
   const glow=V(fx0,gy+2,fz0);
   for(let k=0;k<6;k++){ const a=k/6*Math.PI*2, a2=(k+1)/6*Math.PI*2;
     F(glow, V(fx0+Math.cos(a)*5,gy+2.1,fz0+Math.sin(a)*5), V(fx0+Math.cos(a2)*5,gy+2.1,fz0+Math.sin(a2)*5), [1,.62,.2], .8); } }
-function buildRaftPile(prog){ const n=Math.round(prog*9); if(!n) return;
+function buildRaftPile(prog){ const n=Math.round(Math.min(100,Math.max(0,prog))/100*9); if(!n) return;
   const gy=groundY(RAFT.x,RAFT.z);
   for(let i=0;i<n;i++){ const row=i%3, lvl=(i/3)|0;
     prism(RAFT.x-9+row*7, gy+1.6+lvl*3, RAFT.z-3+row, RAFT.x+9-row*7, gy+1.6+lvl*3, RAFT.z+3-row, 1.5, [.56,.4,.26]); } }
