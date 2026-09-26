@@ -97,7 +97,7 @@ function rnd(seed){ let x=seed; return ()=>{ x=(x*1103515245+12345)&0x7fffffff; 
 const isNight=()=>S&&S.phase==='night';
 const PAL={
   dawn:{sky:['#2e3a66','#7a5a8a','#e8935a','#f7cf8e'],fog:[.55,.42,.5],sun:[1,.72,.45],amb:.34,lv:[-.55,.4,.35],spec:.5},
-  day:{sky:['#3f8fd2','#7ec3e8','#c9ecf5','#eafbff'],fog:[.62,.82,.92],sun:[1,.95,.8],amb:.42,lv:[.45,.62,.45],spec:1},
+  day:{sky:['#3f8fd2','#7ec3e8','#c9ecf5','#eafbff'],fog:[.62,.82,.92],sun:[1,.95,.8],amb:.34,lv:[.45,.62,.45],spec:.85},
   dusk:{sky:['#232048','#6e3a63','#d96a4e','#f2a65e'],fog:[.5,.35,.45],sun:[1,.55,.35],amb:.3,lv:[.6,.3,.4],spec:.7},
   night:{sky:['#040814','#0a1430','#101f3e','#16294a'],fog:[.05,.09,.18],sun:[.5,.58,.75],amb:.16,lv:[-.35,.45,.5],spec:.5},
 };
@@ -244,23 +244,27 @@ const SKIN=[.96,.8,.66], SHIRT=[.92,.87,.75], SHIRTC=[.93,.35,.26], PANTS=[.72,.
 function buildWade(ax,az,act,t,fireOn,wood,near){
   const yaw=Math.atan2(near.x-ax, near.z-az);
   const cs=Math.cos(yaw), sn=Math.sin(yaw);
-  const gy=groundY(ax,az);
+  let gy=groundY(ax,az);
+  const lying0=['nap','sleep','stargaze'].includes(act);
+  if(lying0) gy=Math.max(gy, groundY(ax-14*sn,az-14*cs), groundY(ax+14*sn,az+14*cs))-.4;
   const W=(lx,ly,lz)=>({x:ax+lx*cs+lz*sn, y:gy+ly, z:az-lx*sn+lz*cs});
-  const lying=['nap','sleep','stargaze'].includes(act);
+  const lying=lying0;
+  const curled=act==='nap'||act==='sleep';
   const sitting=['fish','cook','tend_fire','write_bottle'].includes(act);
   const kneeling=['sandcastle','raft_work'].includes(act);
   const bending=act==='gather_wood';
   const jogging=act==='jog';
-  let hipY=lying?3.4:sitting?(act==='fish'?9:5.5):kneeling?6.5:bending?13:18;
+  let hipY=lying?2.6:sitting?(act==='fish'?9:5.5):kneeling?6.5:bending?13:18;
   let lean=lying?0:sitting?.15:kneeling?.5:bending?.85:0;
   if(jogging) hipY+=Math.abs(Math.sin(t*.014))*2.5;
   const step=jogging?Math.sin(t*.014):0;
   const hip=W(0,hipY,0);
-  const torsoTop=lying?W(0,hipY+3.5,-11.5):W(0,hipY+10,-10*lean);
-  const shL=lying?W(-3,hipY+3.5,-10.5):W(-3,hipY+11,-9*lean);
-  const shR=lying?W(3,hipY+3.5,-10.5):W(3,hipY+11,-9*lean);
+  const torsoTop=lying?(curled?W(1.5,hipY+.6,-10.5):W(0,hipY+1,-10.5)):W(0,hipY+10,-10*lean);
+  const shL=lying?(curled?W(-.5,hipY+1.2,-9.5):W(-3,hipY+1.6,-9.5)):W(-3,hipY+11,-9*lean);
+  const shR=lying?(curled?W(3.5,hipY+1,-9.5):W(3,hipY+1.6,-9.5)):W(3,hipY+11,-9*lean);
   let knL,knR,ftL,ftR;
-  if(lying){ knL=W(-2.5,2,7); knR=W(2.5,2,7); ftL=W(-2.5,2.6,14); ftR=W(2.5,2.6,14); }
+  if(lying){ if(curled){ knL=W(4,2.2,4.5); knR=W(4.5,2,6); ftL=W(6,2.2,10); ftR=W(6.5,2,12); }
+    else { knL=W(-2.5,2,7); knR=W(2.5,2,7); ftL=W(-2.5,2.2,14); ftR=W(2.5,2.2,14); } }
   else if(sitting){ const fb=act==='fish'?10:9;
     knL=W(-2.5,hipY-1.5,fb*.6); knR=W(2.5,hipY-1.5,fb*.6); ftL=W(-2.5,1,fb); ftR=W(2.5,1,fb); }
   else if(kneeling){ knL=W(-2.5,1,4); knR=W(2.5,1,4); ftL=W(-2.5,1,-4); ftR=W(2.5,1,-4); }
@@ -275,13 +279,17 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   box(torsoTop.x,torsoTop.y-2.5,torsoTop.z, 8.6,2.6,4.6, SHIRTC,yaw);
   box(torsoTop.x,torsoTop.y+1.4,torsoTop.z, 5.6,3.2,4.6, SHIRT,yaw);
   let head;
-  if(lying){ head=W(0,hipY+5.5,-14.5); }
+  if(lying){ head=curled?W(2.5,hipY+.8,-14):W(0,hipY+1.8,-14); }
   else { head={x:torsoTop.x, y:torsoTop.y+6, z:torsoTop.z}; }
   box(head.x,head.y,head.z, 5,5.6,5,SKIN,yaw);
   box(head.x,head.y+2.6,head.z-(lying?-1:1)*.6, 5.4,2,5.4,HAIR,yaw);
   const fwx=sn*2.55, fwz=cs*2.55;
-  box(head.x+fwx*.92,head.y-2.2,head.z+fwz*.92, 3.4,2.6,1.2,BEARD,yaw);
-  box(head.x+fwx,head.y-.4,head.z+fwz, .9,.9,.9,[.94,.72,.6],yaw);
+  if(lying){ // face up: beard + nose read on the top of the head
+    box(head.x,head.y+2.2,head.z+fwz*.3, 3.2,1.6,3,BEARD,yaw);
+    box(head.x+fwx*.35,head.y+3,head.z+fwz*.35, 1.1,1,1.1,[.94,.72,.6],yaw);
+  } else {
+    box(head.x+fwx*.92,head.y-2.2,head.z+fwz*.92, 3.4,2.6,1.2,BEARD,yaw);
+    box(head.x+fwx,head.y-.4,head.z+fwz, .9,.9,.9,[.94,.72,.6],yaw); }
   let hL,hR;
   if(act==='write_bottle'){ hL=W(-2,hipY+7,7); hR=W(2,hipY+7,7);
     box((hL.x+hR.x)/2,(hL.y+hR.y)/2+1.5,(hL.z+hR.z)/2, 5,3.6,.8,[.82,.72,.5],yaw); }
@@ -290,7 +298,9 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   else if(act==='gather_wood'){ hL=W(-3,hipY+6,4); hR=W(3,hipY+8,6);
     box(hR.x,hR.y+1,hR.z, 4,3,3,[.48,.31,.18],yaw); }
   else if(act==='jog'){ hL=W(-3.2,hipY+8,3+step*5); hR=W(3.2,hipY+8,3-step*5); }
-  else if(lying){ hL=W(-5,hipY+4.6,-10); hR=W(5,hipY+4.6,-10); }
+  else if(act==='stargaze'){ hL=W(-2.5,hipY+1,-17); hR=W(2.5,hipY+1,-17); }
+  else if(curled){ hL=W(3,hipY-.4,-16.5); hR=W(5,hipY-.3,-2); }
+  else if(lying){ hL=W(-4.5,hipY-.2,-4); hR=W(4.5,hipY-.2,-4); }
   else if(act==='coconut'){ hL=W(-4,hipY+14,1); hR=W(4,hipY+15,1); }
   else if(act==='signal'){ hL=W(-3.5,hipY+7,0); hR=W(1.5,hipY+11,4);
     prism(hR.x,hR.y,hR.z, hR.x+sn*7,hR.y+.5,hR.z+cs*7, .9,[.72,.6,.3]); }
@@ -521,6 +531,10 @@ function rebuildDynamic(){
     for(const e of S.recent){ const o=e.data&&e.data.overlay;
       if(o&&now-new Date(e.iso).getTime()<600000){ ov=o; break; } } }
   if(ov==='crab'||ov==='bottle_found') ov=null;
+  if(!ov){ // Mortgage's ambient patrol: one sea cameo per 10-min cycle, never both at once
+    const cyc=Math.floor(t0/600000), frac=(t0-cyc*600000)/600000, r=rnd(cyc*7919+3);
+    if(r()<.35){ const start=r()*.5;
+      if(frac>=start&&frac<=start+.45) ov=r()<.5?'shark':'dolphin'; } }
   if(ov) buildCameo(ov,t0);
   if(window.__spotcheck) window.__spotcheck(buildWade,groundY,t0);
   packDynamic(); }
@@ -540,15 +554,19 @@ function camUpdate(){
   camUpdate.eye=[cx,cy,cz]; }
 
 // ---------------- frame ----------------
-let stars=[]; for(let i=0;i<110;i++) stars.push([Math.random(),Math.random()*.55,Math.random()*1.3+.4]);
+let stars=[]; for(let i=0;i<110;i++) stars.push([Math.random(),Math.random(),Math.random()*1.3+.4]);
 function drawOverlay(t){
   fxctx.clearRect(0,0,W,H);
   const P=pal(), p=S?S.phase:'day';
   // sky gradient behind GL? GL clears to fog color; overlay draws sky only above horizon — simpler: GL clear color is sky-horizon; draw celestial in overlay.
   // stars
   if(p==='night'||p==='dusk'){ fxctx.fillStyle='#fff';
+    // horizon: water at infinity appears at eye height straight ahead - clip stars above it
+    const e=camUpdate.eye, el=Math.hypot(e[0],e[2]);
+    const hp=project(e[0]-e[0]/el*1e5, e[1], e[2]-e[2]/el*1e5);
+    const hy=hp? Math.min(Math.max(hp.y-8, H*.12), H*.8) : H*.4;
     for(const st of stars){ fxctx.globalAlpha=(p==='night'?.8:.35)*Math.abs(Math.sin(t*.001+st[0]*20));
-      fxctx.fillRect(st[0]*W,st[1]*H,st[2],st[2]); } fxctx.globalAlpha=1; }
+      fxctx.fillRect(st[0]*W,st[1]*hy,st[2],st[2]); } fxctx.globalAlpha=1; }
   // moon / sun in the sky (fixed bearing)
   const lv=P.lv, sp=project(-lv[0]*1600, lv[1]*1600, -lv[2]*1600);
   if(sp){ if(p==='night'){ const ill=S?S.moon.illum:.8;
@@ -591,15 +609,26 @@ function drawOverlay(t){
       fxctx.globalAlpha=.5+.5*Math.sin(t*.005+i*1.7);
       fxctx.fillStyle='#cfe86a'; fxctx.beginPath(); fxctx.arc(px,py,1.8,0,7); fxctx.fill(); }
     fxctx.globalAlpha=1; }
+  // sleeping: drifting Zs read from any camera angle
+  if((S.activity==='sleep'||S.activity==='nap')&&wadeHead){
+    const hp=project(wadeHead.head.x,wadeHead.head.y+7,wadeHead.head.z);
+    if(hp){ fxctx.fillStyle='#fff'; fxctx.textAlign='center'; fxctx.textBaseline='middle';
+      for(let i=0;i<3;i++){ const zp=((t*.0004)+i/3)%1;
+        fxctx.globalAlpha=zp<.15?zp/.15* .9:Math.max(0,(1-zp))*1.1;
+        fxctx.font='bold '+(10+i*5)+'px monospace';
+        fxctx.fillText('z', hp.x+12+i*9+zp*9, hp.y-4-zp*40-i*5); }
+      fxctx.globalAlpha=1; } }
   // thought bubble
   if(S.thought&&wadeHead){
-    const hp=project(wadeHead.x,wadeHead.y,wadeHead.z);
-    if(hp){ const bx=Math.min(Math.max(hp.x+10,70),W-70), by=Math.max(hp.y-70,46);
+    const hp=project(wadeHead.head.x,wadeHead.head.y,wadeHead.head.z);
+    if(hp){ fxctx.font='15px serif'; const tw=fxctx.measureText(S.thought).width;
+      const bw2=Math.min(tw+26,W*.8), bh=34;
+      const bx=Math.min(Math.max(hp.x+10,bw2/2+8),W-bw2/2-8), by=Math.max(hp.y-64,bh/2+8);
       fxctx.fillStyle='rgba(255,255,255,.92)';
-      fxctx.beginPath(); fxctx.arc(bx,by,26,0,7); fxctx.fill();
-      fxctx.beginPath(); fxctx.arc(bx-14,by+26,7,0,7); fxctx.fill();
+      fxctx.beginPath(); fxctx.roundRect(bx-bw2/2,by-bh/2,bw2,bh,16); fxctx.fill();
+      fxctx.beginPath(); fxctx.arc(bx-bw2/2+12,by+bh/2+8,6,0,7); fxctx.fill();
       fxctx.beginPath(); fxctx.arc(hp.x+4,hp.y-6,3.5,0,7); fxctx.fill();
-      fxctx.fillStyle='#333'; fxctx.font='17px serif'; fxctx.textAlign='center'; fxctx.textBaseline='middle';
+      fxctx.fillStyle='#333'; fxctx.textAlign='center'; fxctx.textBaseline='middle';
       fxctx.fillText(S.thought,bx,by+1); } }
 }
 function frame(t){
@@ -622,7 +651,7 @@ function frame(t){
     gl.uniformMatrix4fv(locW.uProj,false,projM); gl.uniformMatrix4fv(locW.uView,false,viewM);
     gl.uniform1f(locW.uTime,t); gl.uniform1f(locW.uTide,S?(S.tide==='high'?2.5:S.tide==='low'?-2:0):0);
     gl.uniform3fv(locW.uLDir,ld);
-    gl.uniform3fv(locW.uSun,sun.map(c=>c*(night?.5:.9)));
+    gl.uniform3fv(locW.uSun,sun.map(c=>c*(night?.5:.78)));
     gl.uniform3fv(locW.uAmb,[amb,amb,amb]);
     gl.uniform3fv(locW.uFogCol,fogCol); gl.uniform3fv(locW.uCamPos,camUpdate.eye);
     gl.uniform1f(locW.uFogDen,fogDen); gl.uniform1f(locW.uSpec,P.spec*(night?.6:1));
@@ -638,7 +667,7 @@ function frame(t){
     gl.useProgram(progLit);
     gl.uniformMatrix4fv(locL.uProj,false,projM); gl.uniformMatrix4fv(locL.uView,false,viewM);
     gl.uniform3fv(locL.uLDir,ld);
-    gl.uniform3fv(locL.uSun,sun.map(c=>c*(night?.55:.9)));
+    gl.uniform3fv(locL.uSun,sun.map(c=>c*(night?.55:.78)));
     gl.uniform3fv(locL.uAmb,[amb,amb,amb]);
     gl.uniform3fv(locL.uFirePos,firePos); gl.uniform3fv(locL.uFireCol,fireCol);
     gl.uniform1f(locL.uFireOn,fireOn?1:0);
