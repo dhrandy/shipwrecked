@@ -134,6 +134,9 @@ function island(t){ const cx=W*.55, cy=H*.62, rx=Math.min(W<640?W*.44:W*.3,240),
   for(let x=-rx;x<=rx;x+=6){ const yy=cy+Math.sin(x*.09+t*.002)*2;
     x===-rx?ctx.moveTo(cx+x,yy):ctx.lineTo(cx+x,yy); } ctx.stroke();
   return {cx,cy,rx,ry}; }
+// dome surface at horizontal offset dx: the ground line everything stands on
+function sandY(isl,dx){ const k=Math.min(.98,Math.abs(dx)/isl.rx);
+  return isl.cy-isl.ry*Math.sqrt(1-k*k); }
 
 function palm(x,y,t,decor){ ctx.save(); ctx.translate(x,y);
   ctx.strokeStyle='#7a5230'; ctx.lineWidth=7; ctx.lineCap='round';
@@ -284,24 +287,23 @@ function frame(t){ requestAnimationFrame(frame); const dt=t-last; last=t;
   sea(t);
   const isl=island(t);
   if(S){ // tide shifts the shoreline a touch
-    palm(isl.cx+isl.rx*.42, isl.cy-2, t, S.holidays.includes('christmas')?'christmas':null);
-    if(S.holidays.includes('halloween')){ ctx.fillStyle='#e88030';
-      ctx.beginPath(); ctx.arc(isl.cx-isl.rx*.5, isl.cy-6, 8, 0, 7); ctx.fill();
-      ctx.fillStyle='#3a2a10'; ctx.fillRect(isl.cx-isl.rx*.5-4, isl.cy-9, 2.4,2.4);
-      ctx.fillRect(isl.cx-isl.rx*.5+2, isl.cy-9, 2.4,2.4); }
+    const G=dx=>sandY(isl,dx); // everything plants on the sand dome
+    palm(isl.cx+isl.rx*.42, G(isl.rx*.42)+2, t, S.holidays.includes('christmas')?'christmas':null);
+    if(S.holidays.includes('halloween')){ const hx=isl.cx-isl.rx*.5, hy2=G(-isl.rx*.5);
+      ctx.fillStyle='#e88030';
+      ctx.beginPath(); ctx.arc(hx, hy2-6, 8, 0, 7); ctx.fill();
+      ctx.fillStyle='#3a2a10'; ctx.fillRect(hx-4, hy2-9, 2.4,2.4);
+      ctx.fillRect(hx+2, hy2-9, 2.4,2.4); }
     if(S.world.fire_lit || S.phase==='night' || S.activity==='cook')
-      fire(isl.cx-20, isl.cy+6, t);
-    raft(isl.cx-isl.rx*.55, isl.cy+10, S.world.raft_progress);
-    // Wade's spot depends on activity
-    const spots={fish:[isl.cx+isl.rx*.72, isl.cy-4], jog:[isl.cx+Math.sin(t*.004)*isl.rx*.5, isl.cy+8],
-      sleep:[isl.cx-34, isl.cy+2], nap:[isl.cx+isl.rx*.34, isl.cy+4],
-      cook:[isl.cx-30, isl.cy-4], tend_fire:[isl.cx-30, isl.cy-4],
-      signal:[isl.cx-isl.rx*.6, isl.cy-4], raft_work:[isl.cx-isl.rx*.5, isl.cy+2],
-      gather_wood:[isl.cx-isl.rx*.35, isl.cy+8], sandcastle:[isl.cx+isl.rx*.1, isl.cy+10],
-      coconut:[isl.cx+isl.rx*.4, isl.cy+2], write_bottle:[isl.cx-isl.rx*.1, isl.cy+6],
-      stargaze:[isl.cx+isl.rx*.05, isl.cy+4], bathe:[isl.cx-isl.rx*.85, isl.cy+14],
-      stand:[isl.cx, isl.cy+4]};
-    const p=spots[S.activity]||spots.stand;
+      fire(isl.cx-isl.rx*.08, G(-isl.rx*.08)+3, t);
+    raft(isl.cx-isl.rx*.55, G(-isl.rx*.55)+3, S.world.raft_progress);
+    // Wade's spot depends on activity (offsets are fractions of the island radius)
+    const spots={fish:.72, jog:0, sleep:-.14, nap:.34, cook:-.12, tend_fire:-.12,
+      signal:-.6, raft_work:-.5, gather_wood:-.35, sandcastle:.1, coconut:.4,
+      write_bottle:-.1, stargaze:.05, bathe:-.95, stand:0};
+    const sf=spots[S.activity]!==undefined?spots[S.activity]:0;
+    const dx=(S.activity==='jog'?Math.sin(t*.004)*.5:sf)*isl.rx;
+    const p=[isl.cx+dx, G(dx)+1];
     wade(p[0], p[1], t, S.activity, S.away);
     if(S.away){ // raft on the horizon
       const rx=W*.2+Math.sin(t*.0004)*30; raft(rx, H*.5+Math.sin(t*.001)*3, 100);
