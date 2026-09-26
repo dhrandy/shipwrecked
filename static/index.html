@@ -115,9 +115,9 @@ function box(cx,cy,cz,sx,sy,sz,col,ry){
   const P=[[-x,-y,-z],[x,-y,-z],[x,y,-z],[-x,y,-z],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]];
   const ids=P.map(p=>{ const px=p[0]*cs-p[2]*sn, pz=p[0]*sn+p[2]*cs;
     return V(cx+px,cy+p[1],cz+pz); });
-  quad(ids[0],ids[1],ids[2],ids[3],col); quad(ids[4],ids[6],ids[5],ids[7],col);
-  quad(ids[0],ids[4],ids[5],ids[1],col); quad(ids[3],ids[2],ids[6],ids[7],col);
-  quad(ids[1],ids[5],ids[6],ids[2],col); quad(ids[0],ids[3],ids[7],ids[4],col); }
+  quad(ids[3],ids[2],ids[1],ids[0],col); quad(ids[7],ids[5],ids[6],ids[4],col);
+  quad(ids[1],ids[5],ids[4],ids[0],col); quad(ids[7],ids[6],ids[2],ids[3],col);
+  quad(ids[2],ids[6],ids[5],ids[1],col); quad(ids[4],ids[7],ids[3],ids[0],col); }
 function prism(x0,y0,z0,x1,y1,z1,w,col){
   // robust 4-sided tube between two points, any orientation
   let dx=x1-x0, dy=y1-y0, dz=z1-z0; const dl=Math.hypot(dx,dy,dz)||1; dx/=dl; dy/=dl; dz/=dl;
@@ -130,7 +130,7 @@ function prism(x0,y0,z0,x1,y1,z1,w,col){
            V(x0-(ux-vx)*w,y0-(uy-vy)*w,z0-(uz-vz)*w), V(x0-(ux+vx)*w,y0-(uy+vy)*w,z0-(uz+vz)*w)];
   const B=[V(x1+(ux+vx)*w*.8,y1+(uy+vy)*w*.8,z1+(uz+vz)*w*.8), V(x1+(ux-vx)*w*.8,y1+(uy-vy)*w*.8,z1+(uz-vz)*w*.8),
            V(x1-(ux-vx)*w*.8,y1-(uy-vy)*w*.8,z1-(uz-vz)*w*.8), V(x1-(ux+vx)*w*.8,y1-(uy+vy)*w*.8,z1-(uz+vz)*w*.8)];
-  for(let i=0;i<4;i++){ const j=(i+1)%4; quad(A[i],A[j],B[j],B[i],col); }
+  for(let i=0;i<4;i++){ const j=(i+1)%4; quad(A[j],A[i],B[i],B[j],col); }
   quad(A[0],A[1],A[2],A[3],col); quad(B[3],B[2],B[1],B[0],col); }
 
 // ---------------- island geometry ----------------
@@ -240,7 +240,7 @@ function buildCloudBlobs(){ const r=rnd(13);
 
 // ---------------- wade (all 15 activities) ----------------
 const SKIN=[.96,.8,.66], SHIRT=[.92,.87,.75], SHIRTC=[.93,.35,.26], PANTS=[.52,.49,.45],
-      HAIR=[.38,.28,.19], BEARD=[.4,.3,.2];
+      HAIR=[.38,.28,.19], BEARD=[.4,.3,.2], DARK=[.24,.16,.12], NOSEC=[.93,.71,.58], SHOE=[.3,.24,.19];
 function buildWade(ax,az,act,t,fireOn,wood,near){
   const yaw=Math.atan2(near.x-ax, near.z-az);
   const cs=Math.cos(yaw), sn=Math.sin(yaw);
@@ -248,8 +248,7 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   const lying0=['nap','sleep','stargaze'].includes(act);
   if(lying0) gy=Math.max(gy, groundY(ax-14*sn,az-14*cs), groundY(ax+14*sn,az+14*cs))-.4;
   const W=(lx,ly,lz)=>({x:ax+lx*cs+lz*sn, y:gy+ly, z:az-lx*sn+lz*cs});
-  const lying=lying0;
-  const curled=act==='nap'||act==='sleep';
+  const lying=lying0, curled=act==='nap'||act==='sleep';
   const sitting=['fish','cook','tend_fire','write_bottle'].includes(act);
   const kneeling=['sandcastle','raft_work'].includes(act);
   const bending=act==='gather_wood';
@@ -260,8 +259,9 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   const step=jogging?Math.sin(t*.014):0;
   const hip=W(0,hipY,0);
   const torsoTop=lying?(curled?W(1.5,hipY+.6,-10.5):W(0,hipY+1,-10.5)):W(0,hipY+10,-10*lean);
-  const shL=lying?(curled?W(-.5,hipY+1.2,-9.5):W(-3,hipY+1.6,-9.5)):W(-3,hipY+11,-9*lean);
-  const shR=lying?(curled?W(3.5,hipY+1,-9.5):W(3,hipY+1.6,-9.5)):W(3,hipY+11,-9*lean);
+  // shoulders sit OUTSIDE the chest silhouette so arms read as separate limbs
+  const shL=lying?(curled?W(-.5,hipY+1.2,-9.5):W(-3,hipY+1.6,-9.5)):W(-4.3,hipY+9.4,-9*lean);
+  const shR=lying?(curled?W(3.5,hipY+1,-9.5):W(3,hipY+1.6,-9.5)):W(4.3,hipY+9.4,-9*lean);
   let knL,knR,ftL,ftR;
   if(lying){ if(curled){ knL=W(4,2.2,4.5); knR=W(4.5,2,6); ftL=W(6,2.2,10); ftR=W(6.5,2,12); }
     else { knL=W(-2.5,2,7); knR=W(2.5,2,7); ftL=W(-2.5,2.2,14); ftR=W(2.5,2.2,14); } }
@@ -274,53 +274,68 @@ function buildWade(ax,az,act,t,fireOn,wood,near){
   const limb=(a,b,w,col)=>prism(a.x,a.y,a.z,b.x,b.y,b.z,w,col);
   limb(W(-2.5,hipY,0),knL,2.2,PANTS); limb(W(2.5,hipY,0),knR,2.2,PANTS);
   limb(knL,ftL,1.9,PANTS); limb(knR,ftR,1.9,PANTS);
-  box(hip.x,hip.y,hip.z, 5,3.6,3.8,PANTS,yaw);
-  prism(hip.x,hip.y,hip.z, torsoTop.x,torsoTop.y,torsoTop.z, 3.1, SHIRT);
-  box(torsoTop.x,torsoTop.y-2.5,torsoTop.z, 8.6,2.6,4.6, SHIRTC,yaw);
-  box(torsoTop.x,torsoTop.y+1.4,torsoTop.z, 5.6,3.2,4.6, SHIRT,yaw);
+  box(hip.x,hip.y,hip.z, 4.8,3.6,3.6,PANTS,yaw);
+  // torso: stacked concentric prisms (shirt, red band ring, chest) - no box/tube clipping
+  const lp=(a,b,f)=>({x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f, z:a.z+(b.z-a.z)*f});
+  const b1=lp(hip,torsoTop,.4), b2=lp(hip,torsoTop,.64);
+  limb(hip,b1,3.0,SHIRT);
+  prism(b1.x,b1.y,b1.z, b2.x,b2.y,b2.z, 3.55, SHIRTC);
+  prism(b2.x,b2.y,b2.z, torsoTop.x,torsoTop.y,torsoTop.z, 3.25, SHIRT);
+  // head on a real neck, with a face: eyes, nose, chin beard, hair cap
   let head;
   if(lying){ head=curled?W(2.5,hipY+.8,-14):W(0,hipY+1.8,-14); }
-  else { head={x:torsoTop.x, y:torsoTop.y+6, z:torsoTop.z}; }
-  prism(torsoTop.x,torsoTop.y+1.5,torsoTop.z, head.x,head.y-1.5,head.z, 1.4, SKIN);
-  box(head.x,head.y,head.z, 5,5.6,5,SKIN,yaw);
-  box(head.x,head.y+2.6,head.z-(lying?-1:1)*.6, 5.4,2,5.4,HAIR,yaw);
-  const fwx=sn*2.55, fwz=cs*2.55;
-  if(lying){ // face up: beard + nose read on the top of the head
-    box(head.x,head.y+2.2,head.z+fwz*.3, 3.2,1.6,3,BEARD,yaw);
-    box(head.x+fwx*.35,head.y+3,head.z+fwz*.35, 1.1,1,1.1,[.94,.72,.6],yaw);
+  else { head={x:torsoTop.x, y:torsoTop.y+5.6, z:torsoTop.z}; }
+  prism(torsoTop.x,torsoTop.y+.5,torsoTop.z, head.x,head.y-2.0,head.z, 1.15, SKIN);
+  box(head.x,head.y,head.z, 4.8,5.4,4.6,SKIN,yaw);
+  box(head.x,head.y+2.55,head.z, 5.2,1.7,5.0,HAIR,yaw);
+  const fpt=(lx,ly,lz)=>({x:head.x+lx*cs+lz*sn, y:head.y+ly, z:head.z-lx*sn+lz*cs});
+  if(lying){ // face up: features laid on the top of the head
+    const bd=fpt(0,2.7,.6); box(bd.x,bd.y,bd.z, 3.2,1.2,2.8,BEARD,yaw);
+    const nz=fpt(0,2.85,-.6); box(nz.x,nz.y,nz.z, 1.1,.9,1.1,NOSEC,yaw);
+    const eL=fpt(-1,2.85,-1.6), eR=fpt(1,2.85,-1.6);
+    box(eL.x,eL.y,eL.z, .95,.8,.9,DARK,yaw); box(eR.x,eR.y,eR.z, .95,.8,.9,DARK,yaw);
   } else {
-    box(head.x+fwx*.92,head.y-2.2,head.z+fwz*.92, 3.4,2.6,1.2,BEARD,yaw);
-    box(head.x+fwx,head.y-.4,head.z+fwz, .9,.9,.9,[.94,.72,.6],yaw); }
+    const eL=fpt(-1.05,.75,2.25), eR=fpt(1.05,.75,2.25);
+    box(eL.x,eL.y,eL.z, 1.0,1.1,.7,DARK,yaw); box(eR.x,eR.y,eR.z, 1.0,1.1,.7,DARK,yaw);
+    const nz=fpt(0,-.35,2.45); box(nz.x,nz.y,nz.z, .95,.95,1.0,NOSEC,yaw);
+    const bd=fpt(0,-2.0,2.0); box(bd.x,bd.y,bd.z, 3.0,1.6,1.2,BEARD,yaw);
+  }
   let hL,hR;
-  if(act==='write_bottle'){ hL=W(-2,hipY+7,7); hR=W(2,hipY+7,7);
+  if(act==='write_bottle'){ hL=W(-1.8,hipY+6.5,7); hR=W(1.8,hipY+6.5,7);
     box((hL.x+hR.x)/2,(hL.y+hR.y)/2+1.5,(hL.z+hR.z)/2, 5,3.6,.8,[.82,.72,.5],yaw); }
-  else if(act==='fish'){ hL=W(-2.5,hipY+8,5); hR=W(2.5,hipY+8,6); }
-  else if(act==='tend_fire'||act==='cook'||act==='raft_work'||act==='sandcastle'){ hL=W(-2.5,hipY+5,7); hR=W(2.5,hipY+5,8); }
-  else if(act==='gather_wood'){ hL=W(-3,hipY+6,4); hR=W(3,hipY+8,6);
+  else if(act==='fish'){ hL=W(-1.5,hipY+7.5,5); hR=W(1.5,hipY+7,6.5); }
+  else if(act==='tend_fire'||act==='cook'||act==='raft_work'||act==='sandcastle'){ hL=W(-2,hipY+4.5,7.5); hR=W(2,hipY+4.5,8.5); }
+  else if(act==='gather_wood'){ hL=W(-2.5,hipY+6,4); hR=W(2.5,hipY+8,6);
     box(hR.x,hR.y+1,hR.z, 4,3,3,[.48,.31,.18],yaw); }
-  else if(act==='jog'){ hL=W(-3.2,hipY+8,3+step*5); hR=W(3.2,hipY+8,3-step*5); }
-  else if(act==='stargaze'){ hL=W(-2.5,hipY+1,-17); hR=W(2.5,hipY+1,-17); }
+  else if(act==='jog'){ hL=W(-3.4,hipY+7.5,3+step*5); hR=W(3.4,hipY+7.5,3-step*5); }
+  else if(act==='stargaze'){ hL=W(-2.5,hipY+1,-16.5); hR=W(2.5,hipY+1,-16.5); }
   else if(curled){ hL=W(3,hipY-.4,-16.5); hR=W(5,hipY-.3,-2); }
   else if(lying){ hL=W(-4.5,hipY-.2,-4); hR=W(4.5,hipY-.2,-4); }
-  else if(act==='coconut'){ hL=W(-4,hipY+14,1); hR=W(4,hipY+15,1); }
-  else if(act==='signal'){ hL=W(-3.5,hipY+7,0); hR=W(1.5,hipY+11,4);
+  else if(act==='coconut'){ hL=W(-2,hipY+13.5,1); hR=W(2,hipY+14.5,1); }
+  else if(act==='signal'){ hL=W(-3.8,hipY+6,0); hR=W(1.5,hipY+11,4);
     prism(hR.x,hR.y,hR.z, hR.x+sn*7,hR.y+.5,hR.z+cs*7, .9,[.72,.6,.3]); }
-  else { hL=W(-3.5,hipY+7,0); hR=W(3.5,hipY+7,0); }
-  limb(shL,hL,2,SHIRT); limb(shR,hR,2,SHIRT);
-  box(hL.x,hL.y,hL.z, 1.9,1.9,1.9,SKIN,yaw); box(hR.x,hR.y,hR.z, 1.9,1.9,1.9,SKIN,yaw);
+  else { hL=W(-5.2,hipY+3.2,1); hR=W(5.2,hipY+3.2,1); }
+  // two-segment arms: sleeve upper arm, skin forearm, elbow pushed outward
+  const arm=(sh,hn,side,bend)=>{ const el={x:(sh.x+hn.x)/2+side*bend*cs, y:(sh.y+hn.y)/2-bend*.7, z:(sh.z+hn.z)/2-side*bend*sn};
+    prism(sh.x,sh.y,sh.z, el.x,el.y,el.z, 1.7, SHIRT);
+    prism(el.x,el.y,el.z, hn.x,hn.y,hn.z, 1.45, SKIN);
+    box(hn.x,hn.y,hn.z, 1.8,1.8,1.8, SKIN, yaw); };
+  if(lying){ limb(shL,hL,1.7,SHIRT); limb(shR,hR,1.7,SHIRT);
+    box(hL.x,hL.y,hL.z, 1.8,1.8,1.8,SKIN,yaw); box(hR.x,hR.y,hR.z, 1.8,1.8,1.8,SKIN,yaw); }
+  else { box(shL.x,shL.y,shL.z, 2.5,2.5,2.5,SHIRT,yaw); box(shR.x,shR.y,shR.z, 2.5,2.5,2.5,SHIRT,yaw);
+    arm(shL,hL,-1,1.3); arm(shR,hR,1,1.3); }
   if(act==='fish'){ const rx=(hL.x+hR.x)/2, ry=(hL.y+hR.y)/2, rz=(hL.z+hR.z)/2;
     const tx=rx+sn*60, tz=rz+cs*60, ty=2;
     prism(rx,ry,rz, tx,ty+14,tz, .7,[.55,.4,.26]); }
   if(act==='cook'){ const rx=(hL.x+hR.x)/2, ry=(hL.y+hR.y)/2, rz=(hL.z+hR.z)/2;
     prism(rx,ry,rz, rx+sn*14,ry+3,rz+cs*14, .5,[.5,.38,.24]); }
-  box(ftL.x+sn*1,ftL.y-.2,ftL.z+cs*1, 2.4,1.5,3.4,[.3,.24,.19],yaw);
-  box(ftR.x+sn*1,ftR.y-.2,ftR.z+cs*1, 2.4,1.5,3.4,[.3,.24,.19],yaw);
+  box(ftL.x+sn*1.2,ftL.y-.2,ftL.z+cs*1.2, 2.4,1.6,3.6,SHOE,yaw);
+  box(ftR.x+sn*1.2,ftR.y-.2,ftR.z+cs*1.2, 2.4,1.6,3.6,SHOE,yaw);
   // blob shadow grounds him (lit like terrain, just darker)
   const sc=lying?[9,16]:[7.5,7.5], shy=groundY(ax,az)+.25, shc=V(ax,shy,az);
   for(let k=0;k<8;k++){ const a=k/8*Math.PI*2, a2=(k+1)/8*Math.PI*2;
     F(shc, V(ax+Math.cos(a)*sc[0],shy,az+Math.sin(a)*sc[1]), V(ax+Math.cos(a2)*sc[0],shy,az+Math.sin(a2)*sc[1]), [.42,.34,.22]); }
   return {head:{x:head.x,y:head.y+3.4,z:head.z}, yaw, gy}; }
-
 // ---------------- fire / raft / cameos ----------------
 function buildFirePit(t){ const fx0=FIRE.x,fz0=FIRE.z, gy=groundY(fx0,fz0);
   for(let i=0;i<7;i++){ const a=i/7*Math.PI*2;
@@ -505,8 +520,8 @@ const ACTS=['fish','gather_wood','raft_work','nap','sleep','jog','coconut','sand
 const SPOTS={
   fish:[86,60], gather_wood:[68,-14], raft_work:[48,32], nap:[-54,30],
   sleep:[-30,46], jog:null, coconut:[-56,30], sandcastle:[36,56],
-  signal:[-10,-64], cook:[-15,21], write_bottle:[20,58], stargaze:[4,26],
-  bathe:[140,55], tend_fire:[-15,21], stand:[6,74] };
+  signal:[-10,-64], cook:[-13,13], write_bottle:[20,58], stargaze:[4,26],
+  bathe:[140,55], tend_fire:[-13,13], stand:[6,74] };
 const NEAR={
   fish:{x:150,z:110}, gather_wood:{x:84,z:-20}, raft_work:RAFT, coconut:PALM,
   cook:FIRE, tend_fire:FIRE, sandcastle:{x:45,z:63}, signal:{x:-14,z:-300},

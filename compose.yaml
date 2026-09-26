@@ -3,7 +3,7 @@ services:
     build: .
     # or build straight from the repo once it's on GitHub:
     # build: https://github.com/YOURUSER/shipwrecked.git#main
-    image: shipwrecked:0.2.2
+    image: shipwrecked:0.2.3
     container_name: shipwrecked
     restart: unless-stopped
     ports:
