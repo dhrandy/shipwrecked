@@ -74,7 +74,9 @@
 <div id="catchup"><div class="card"><h2 id="cuhead">WHILE YOU WERE AWAY</h2><div id="culist"></div>
   <button id="cubtn">BACK TO THE ISLAND</button></div></div>
 
-<script type="importmap">{"imports":{"three":"/static/vendor/three.module.js"}}</script>
+<script type="importmap">
+{"imports":{"three":"/static/vendor/three.module.js","three/addons/":"/static/vendor/"}}
+</script>
 <script type="module">
 "use strict";
 // Shipwrecked v0.6.0 scene - real modeled assets (KayKit, Quaternius, Google Poly archive) in Three.js.
@@ -89,7 +91,7 @@ try { lastVisit = localStorage.getItem('shipwrecked_last'); } catch(e){}
 const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true});
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+renderer.toneMappingExposure = 1.12;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene3 = new THREE.Scene();
@@ -107,7 +109,7 @@ const isNight=()=>S&&S.phase==='night';
 
 const PAL={
   dawn:{sky:['#2e3a66','#7a5a8a','#e8935a','#f7cf8e'],fog:'#c99a8f',sun:0xffd9a8,sunI:1.5,hemi:0x8a7a9a,amb:.5,lv:[-.62,.34,.32],spec:.5},
-  day:{sky:['#3f8fd2','#7ec3e8','#c9ecf5','#eafbff'],fog:'#bfe0ee',sun:0xfff3d8,sunI:1.9,hemi:0x9ec8e8,amb:.62,lv:[.45,.62,.45],spec:.9},
+  day:{sky:['#4a9ad8','#8fcbe8','#ffe9c0','#fff6e0'],fog:'#cfdfe4',sun:0xffe0b0,sunI:2.1,hemi:0xa8c8e8,amb:.55,lv:[.55,.45,.35],spec:.9},
   dusk:{sky:['#3a3266','#8a4a6e','#e0703f','#ffc98a'],fog:'#e8a06a',sun:0xffb066,sunI:1.7,hemi:0x9a6a7a,amb:.5,lv:[.72,.18,.42],spec:.85},
   night:{sky:['#040814','#0a1430','#101f3e','#16294a'],fog:'#0e1a2e',sun:0x8ea8d8,sunI:.55,hemi:0x2a3a55,amb:.3,lv:[-.35,.45,.5],spec:.5},
 };
@@ -165,7 +167,7 @@ function meshGroundY(x,z){ const d=Math.hypot(x,z), th=Math.atan2(z,x);
   return y; }
 let islandMesh;
 function buildIsland(){ const K=30, J=110, pos=[], col=[], idx=[];
-  const sandA=[.97,.87,.58], sandB=[.89,.71,.44], wet=[.74,.59,.4], grassA=[.44,.74,.26], grassB=[.26,.56,.18];
+  const sandA=[.96,.82,.55], sandB=[.87,.66,.40], wet=[.72,.57,.38], grassA=[.34,.64,.22], grassB=[.17,.44,.12], grassC=[.50,.74,.26];
   for(let k=0;k<=K;k++){ const f=k/K;
     for(let j=0;j<=J;j++){ const th=j/J*Math.PI*2, R=islR(th)*f;
       const x=Math.cos(th)*R, z=Math.sin(th)*R;
@@ -173,13 +175,15 @@ function buildIsland(){ const K=30, J=110, pos=[], col=[], idx=[];
       y+= (vnoise(x*.045,z*.045)-.5)*7*f + (vnoise(x*.16,z*.16)-.5)*2.2*f;
       y+= (vnoise(x*.3,z*.3)-.5)*.55*(1-f);
       pos.push(x,y,z);
-      const ge=.42+.09*Math.sin(3*th+.7)+.05*Math.sin(7*th+2.1)+(vnoise(th*8,3.7)-.5)*.1;
-      const g=clamp((ge-f)*9+ .5,0,1);
+      const ge=.66+.08*Math.sin(3*th+.7)+.05*Math.sin(7*th+2.1)+(vnoise(th*8,3.7)-.5)*.12;
+      const g=clamp((ge-f)*4.5+ .5,0,1);
       const n=vnoise(x*.35,z*.35), n3=vnoise(x*.09+40,z*.09);
       let c=[ sandA[0]+(sandB[0]-sandA[0])*n3, sandA[1]+(sandB[1]-sandA[1])*n3, sandA[2]+(sandB[2]-sandA[2])*n3 ];
       if(f>.9){ const w=clamp((f-.9)/.06,0,1);
         c=[c[0]+(wet[0]-c[0])*w, c[1]+(wet[1]-c[1])*w, c[2]+(wet[2]-c[2])*w]; }
-      const gc=[ grassA[0]+(grassB[0]-grassA[0])*n, grassA[1]+(grassB[1]-grassA[1])*n, grassA[2]+(grassB[2]-grassA[2])*n ];
+      const gA2=[ grassA[0]+(grassB[0]-grassA[0])*n, grassA[1]+(grassB[1]-grassA[1])*n, grassA[2]+(grassB[2]-grassA[2])*n ];
+      const hp=vnoise(x*.06+9,z*.06+9);
+      const hw=hp*hp*hp*.7; const gc=[ gA2[0]+(grassC[0]-gA2[0])*hw, gA2[1]+(grassC[1]-gA2[1])*hw, gA2[2]+(grassC[2]-gA2[2])*hw ];
       c=[ c[0]+(gc[0]-c[0])*g, c[1]+(gc[1]-c[1])*g, c[2]+(gc[2]-c[2])*g ];
       col.push(c[0],c[1],c[2]); } }
   for(let k=0;k<K;k++) for(let j=0;j<J;j++){ const a=k*(J+1)+j, b=a+1, c2=a+J+1, d=c2+1;
@@ -220,8 +224,9 @@ function buildWater(){ const n=WN+1, pos=[], uv=[], idx=[];
       void main(){ vec3 p=position;
         float d0=length(p.xz);
         float shoreR=islR(atan(p.z,p.x));
-        float amp = 1.2 + 2.6*smoothstep(shoreR+80., shoreR+700., d0);   // calm lagoon, rolling sea
-        amp += 3.1*exp(-pow((d0-shoreR-70.)/60.,2.));                    // breaker train rears outside the beach
+        float amp = (1.2 + 2.6*smoothstep(shoreR+80., shoreR+700., d0)) * (1.-smoothstep(900.,2600.,d0)*.8);   // calm lagoon, rolling sea, far sea settles (no terraced horizon)
+        float leeV=.35+.65*smoothstep(-.35,.8,cos(atan(p.z,p.x)-.585));   // swell arrives from dir (.83,.55)
+        amp += 3.1*exp(-pow((d0-shoreR-70.)/60.,2.))*leeV;                // breaker train rears outside the beach, swell side
         float h = wave(p.xz,vec2(.83,.55),.021,.00115,1.) + wave(p.xz,vec2(-.42,.91),.033,.0009,.7)
                 + wave(p.xz,vec2(.17,-.98),.052,.0014,.45) + wave(p.xz,vec2(-.9,-.44),.013,.0007,1.2);
         p.y = h*amp + uTide;
@@ -257,19 +262,24 @@ function buildWater(){ const n=WN+1, pos=[], uv=[], idx=[];
         col += uSunCol * pow(max(dot(R,V),0.), 90.) * uSpec;
         col += uSunCol * pow(max(dot(R,V),0.), 9.) * uSpec * .12 * (1.-smoothstep(700., 2400., dist));
         // --- foam: waves that travel IN toward the beach, not static splotches ---
+        // surf wraps the island but arrives WITH the swell - bowed, broken-up crests, no full rings (v0.6.0 rings read as a river)
+        vec2 swDir=vec2(.83,.55); float lee=.25+.75*smoothstep(-.3,.85,cos(th-.585));
+        float brk=.35+.65*vn(vec2(th*5.1, uTime*.0008));
+        float pd = d - dot(vW.xz,swDir)*.5;   // bow crest lines into arcs facing the swell
         // 1) breaker belt: crest lines rolling shoreward outside the beach
-        float travel = sin((d-uTime*.016)*.075 + vn(vW.xz*.018)*4.2);
-        float belt = smoothstep(shore+16., shore+45., d) * (1.-smoothstep(shore+70., shore+170., d));
-        float breaker = smoothstep(.42,.9, travel) * belt;
+        float travel = sin((pd-uTime*.016)*.075 + vn(vW.xz*.018)*5.5);
+        float belt = smoothstep(shore+16., shore+45., d) * (1.-smoothstep(shore+60., shore+120., d));
+        float breaker = smoothstep(.42,.9, travel) * belt * lee * brk;
         breaker *= .55+.45*vn(vW.xz*vec2(.06,.14)+vec2(uTime*.002,0.));
         // 2) secondary chop lines closer in, faster
-        float chop = smoothstep(.55,.95, sin((d-uTime*.026)*.17 + vn(vW.xz*.05)*5.))
-                   * smoothstep(shore+3.,shore+12.,d) * (1.-smoothstep(shore+14.,shore+38.,d));
+        float chop = smoothstep(.55,.95, sin((pd-uTime*.026)*.17 + vn(vW.xz*.05)*5.))
+                   * smoothstep(shore+3.,shore+12.,d) * (1.-smoothstep(shore+14.,shore+38.,d))
+                   * lee * (.35+.65*vn(vec2(th*3.7+9., uTime*.0011)));
         // 3) wash streaks running up the sand, elongated radially
         float washN = vn(vec2(th*34., d*.3-uTime*.018));
-        float wash = smoothstep(.38,.85,washN) * (1.-smoothstep(shore+2., shore+9., d)) * smoothstep(shore-11., shore-2., d);
+        float wash = smoothstep(.38,.85,washN) * (1.-smoothstep(shore+2., shore+9., d)) * smoothstep(shore-11., shore-2., d) * (.45+.55*lee);
         // 4) bright contact line where the sea meets the sand, breathing with the wash
-        float contact = (1.-smoothstep(shore-1.5, shore+2.2, d)) * (.7+.3*sin(uTime*.012+th*24.+vn(vW.xz*.04)*3.));
+        float contact = (1.-smoothstep(shore-1.5, shore+2.2, d)) * (.7+.3*sin(uTime*.012+th*24.+vn(vW.xz*.04)*3.)) * (.6+.4*lee);
         float foam = clamp(breaker*1.05 + chop*.75 + wash*.85 + contact*.9, 0., 1.);
         col = mix(col, vec3(.97,.99,1.), foam*.88);
         float f2 = 1.-exp(-uFogDen*uFogDen*dist*dist);
@@ -337,13 +347,12 @@ function buildPalms(){ const r=rnd(77);
   const p1=spawnAsset('palm1');
   if(p1){ scaleTo(p1,88,'h');
     p1.rotation.set(.06,.9,.22);           // baked lean, tipped seaward
-    const b=new THREE.Box3().setFromObject(p1);
-    p1.position.set(PALM.x, py - b.min.y - 1.5, PALM.z);
+    p1.position.set(PALM.x, py - 1.5, PALM.z);   // glb origin IS the trunk base (min.y~0); bbox-min after the lean let drooping fronds set the floor -> floating trunk (v0.6.0)
     scene3.add(p1); palmSway.push({m:p1,baseZ:.22,ph:0}); }
   const p2=spawnAsset('palm2');
   if(p2){ scaleTo(p2,58,'h'); p2.rotation.set(-.03,2.4,-.14);
-    const x2=PALM.x+34, z2=PALM.z+10, b=new THREE.Box3().setFromObject(p2);
-    p2.position.set(x2, meshGroundY(x2,z2) - b.min.y - 1, z2);
+    const x2=PALM.x+34, z2=PALM.z+10;
+    p2.position.set(x2, meshGroundY(x2,z2) - 1, z2);
     scene3.add(p2); palmSway.push({m:p2,baseZ:-.14,ph:2.2}); }
   // fern clumps at the base (cheap procedural fronds)
   const gA=[.16,.4,.14], gB=[.45,.66,.22];
@@ -358,8 +367,8 @@ function buildPalms(){ const r=rnd(77);
     g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
     g.setIndex(idx); g.computeVertexNormals(); return g; };
   const fm=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,side:THREE.DoubleSide});
-  for(let k=0;k<6;k++){ const a=r()*6.28, dd=5+r()*9, fx0=PALM.x+Math.cos(a)*dd, fz0=PALM.z+Math.sin(a)*dd;
-    for(let i=0;i<6;i++){ const f=new THREE.Mesh(frondGeo(8+r()*4,1.1,r()*50),fm);
+  for(let k=0;k<11;k++){ const a=r()*6.28, dd=4+r()*11, fx0=PALM.x+Math.cos(a)*dd, fz0=PALM.z+Math.sin(a)*dd;
+    for(let i=0;i<6;i++){ const f=new THREE.Mesh(frondGeo(10+r()*6,1.3,r()*50),fm);
       f.position.set(fx0,meshGroundY(fx0,fz0)+.5,fz0); f.rotation.y=r()*6.28; f.rotation.z=.5+r()*.3;
       scene3.add(f); } }
   // coconuts under the hero crown
@@ -367,6 +376,22 @@ function buildPalms(){ const r=rnd(77);
   for(let i=0;i<3;i++){ const c=new THREE.Mesh(new THREE.SphereGeometry(2.4,12,10),cocoMat);
     const cx=PALM.x+13+Math.cos(i*2.2)*4, cz=PALM.z+3+Math.sin(i*2.2)*4;
     c.position.set(cx, meshGroundY(cx,cz)+2, cz); c.castShadow=true; scene3.add(c); } }
+
+// ---------------- grass tufts: instanced blades so the top reads grassy, not bald sand ----------------
+function buildGrassTufts(){ const r=rnd(313);
+  const geo=new THREE.ConeGeometry(.55,3.4,4);
+  const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.9});
+  const N=420, inst=new THREE.InstancedMesh(geo,mat,N);
+  const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(), v=new THREE.Vector3(), sc=new THREE.Vector3();
+  const cA=new THREE.Color(.28,.55,.16), cB=new THREE.Color(.50,.72,.24), cc=new THREE.Color();
+  for(let i=0;i<N;i++){ const th=r()*6.283, f=.08+r()*.48, R=islR(th)*f;
+    const x=Math.cos(th)*R, z=Math.sin(th)*R, y=meshGroundY(x,z);
+    e.set((r()-.5)*.5,r()*6.28,(r()-.5)*.5); q.setFromEuler(e);
+    const s=.4+r()*.5; sc.set(s,s*(0.6+r()*.5),s);
+    v.set(x,y+1.4*sc.y,z);
+    m4.compose(v,q,sc); inst.setMatrixAt(i,m4);
+    cc.copy(cA).lerp(cB,r()); inst.setColorAt(i,cc); }
+  inst.castShadow=false; scene3.add(inst); }
 
 // ---------------- camp: chest, fire, raft-in-progress ----------------
 const FIRE={x:-16,z:34}, RAFT={x:118,z:78}, CHEST={x:-26,z:42};
@@ -515,16 +540,24 @@ function buildWade(){
   // scruffy castaway hair tufts on the (hatless) head bone
   if(head){ const hr=rnd(500); const hm=std(HAIR,.95);
     // messy hair: a ragged cap hugging the crown + a few wild tufts
-    const cap=new THREE.Mesh(new THREE.SphereGeometry(.42,14,10,0,Math.PI*2,0,1.35),hm);
-    cap.position.y=.52; cap.scale.set(1.02,.85,1.02); head.add(cap);
-    for(let i=0;i<7;i++){ const a=hr()*6.28, rr=.08+hr()*.2,
-        tuft=new THREE.Mesh(new THREE.ConeGeometry(.07+hr()*.06,.26+hr()*.2,5),hm);
-      tuft.position.set(Math.cos(a)*rr,.82+hr()*.1,Math.sin(a)*rr);
-      tuft.rotation.set(Math.sin(a)*(1+hr()*.5),0,-Math.cos(a)*(1+hr()*.5));
-      head.add(tuft); }
-    for(let i=0;i<4;i++){ const fr=new THREE.Mesh(new THREE.ConeGeometry(.06+hr()*.05,.18+hr()*.14,5),hm);
-      fr.position.set((i-1.5)*.13+(hr()-.5)*.05,.6+hr()*.05,.36+hr()*.04);
-      fr.rotation.set(2.2+hr()*.4,0,(hr()-.5)*.5); head.add(fr); } }
+    // measured head box (head-local): x +-.543, y -0.107..0.945, z -0.46..0.526 - hair must sit OUTSIDE it (v0.6.0 cap r=.42@y.52 was fully embedded -> bald)
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.58,16,12,0,Math.PI*2,0,1.3),hm);
+    cap.position.y=.55; cap.scale.set(1,.78,1); head.add(cap);
+    for(let i=0;i<13;i++){ const a=hr()*6.28, rr=.1+hr()*.34,
+        curl=new THREE.Mesh(new THREE.SphereGeometry(.13+hr()*.09,8,6),hm);
+      curl.position.set(Math.cos(a)*rr,.74+hr()*.3,Math.sin(a)*rr); head.add(curl); }
+    for(let i=0;i<4;i++){ const fr=new THREE.Mesh(new THREE.SphereGeometry(.09+hr()*.05,7,6),hm);
+      fr.position.set((i-1.5)*.17+(hr()-.5)*.06,.66+hr()*.08,.52+hr()*.04); head.add(fr); }
+    // full beard + mustache: lumpy curls hugging the jaw (flat plates read as a black slab)
+    const bm=std(0x54381f,.95);
+    const bJaw=new THREE.Mesh(new THREE.SphereGeometry(.26,10,8),bm);
+    bJaw.position.set(0,.04,.34); bJaw.scale.set(1.55,.85,.75); head.add(bJaw);
+    const bChin=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),bm);
+    bChin.position.set(0,-.07,.24); bChin.scale.set(1.3,.7,1.1); head.add(bChin);
+    for(const sx of [-1,1]){ const bSide=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),bm);
+      bSide.position.set(sx*.4,.1,.18); bSide.scale.set(.7,1.05,1.15); head.add(bSide); }
+    for(const sx of [-1,1]){ const m=new THREE.Mesh(new THREE.SphereGeometry(.085,7,5),bm);
+      m.position.set(sx*.13,.35,.5); m.scale.set(1.4,.65,.75); head.add(m); } }
   // gear held in the hand slots, shown per activity
   const gear={};
   if(slotR){
@@ -548,6 +581,24 @@ function buildWade(){
   if(slotL){ const heldLog=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.5,8),std(0x8a6a42,.85));
     heldLog.rotation.z=Math.PI/2; heldLog.visible=false; slotL.add(heldLog); gear.heldLog=heldLog; }
   return {g, mixer, play, acts, headObj:head||g, gear}; }
+// standing idle used to loop the same 'Idle' clip forever (Randy: "same repetitive motion").
+// now: rotate base idles, drop in one-shot fidgets at random intervals.
+const idleSm={clip:'Idle',until:0,fidget:false};
+const IDLE_BASES=['Idle','Unarmed_Idle'];
+const IDLE_FIDGETS=['Spellcast_Raise','PickUp','Throw','Interact','1H_Ranged_Aiming'];
+function idleClip(t){
+  if(t<idleSm.until) return idleSm.clip;
+  if(!idleSm.fidget && Math.random()<.5){
+    idleSm.fidget=true;
+    idleSm.clip=IDLE_FIDGETS[Math.floor(Math.random()*IDLE_FIDGETS.length)];
+    const dur=(wadeMesh&&wadeMesh.acts[idleSm.clip])?wadeMesh.acts[idleSm.clip].getClip().duration:1.6;
+    idleSm.until=t+dur*1000+Math.random()*700;
+  } else {
+    idleSm.fidget=false;
+    idleSm.clip=IDLE_BASES[Math.floor(Math.random()*IDLE_BASES.length)];
+    idleSm.until=t+5000+Math.random()*7000;
+  }
+  return idleSm.clip; }
 // which animation clip each activity uses
 function wadeClip(act,walking,atChest){
   if(walking) return act==='jog'?'Running_A':'Walking_A';
@@ -613,7 +664,7 @@ function applyPhase(){ const P=pal(), ph=S?S.phase:'dusk';
   sun.castShadow=ph!=='night';
   hemi.color.set(P.hemi); hemi.groundColor.set(0x8a7355); hemi.intensity=P.amb;
   waterU.uSunDir.value.copy(lv); waterU.uSunCol.value.set(P.sun);
-  waterU.uSky.value.set(P.sky[2]); waterU.uSpec.value=P.spec;
+  waterU.uSky.value.set(P.sky[1]);  // melt into blue air, not the warm horizon band (cream there turned the far sea tan) waterU.uSpec.value=P.spec;
   const wc=WATER_COLS[ph]||WATER_COLS.day;
   waterU.uShal.value.set(wc.shal); waterU.uDeep.value.set(wc.deep);
   window.__stars.material.opacity=ph==='night'?.85:ph==='dusk'?.18:0;
@@ -621,7 +672,7 @@ function applyPhase(){ const P=pal(), ph=S?S.phase:'dusk';
   sunSpr.position.copy(lv).multiplyScalar(3300); moonSpr.position.set(-1350,1500,-1450);
   const cl=S&&S.weather==='cloudy'?.4:1;
   for(const c of cloudSprites){ c.m.material.opacity=(ph==='night'?.16:ph==='dusk'?.55:.85)*cl;
-    c.m.material.color.set(ph==='dusk'?0xffd0a0:ph==='night'?0x8899bb:0xffffff); }
+    c.m.material.color.set(ph==='dusk'?0xffd0a0:ph==='night'?0x8899bb:0xfff2df); }
   if(window.__isleMat) window.__isleMat.color.set(ph==='night'?0x141f33:ph==='dusk'?0x5c4458:ph==='dawn'?0x6a5a72:0x6f94ad);
   const lit=!!(S&&S.world.fire_lit);
   if(fireLight) fireLight.intensity=lit? 1.6+Math.sin(t0*.03)*.4+Math.sin(t0*.017)*.2 : 0;
@@ -693,7 +744,9 @@ function frame(t){ t0=t;
   const face=walker.walking? walker.yaw : (near? Math.atan2(near.x-walker.x,near.z-walker.z) : walker.yaw);
   wadeMesh.g.rotation.y=face;
   const atChest=walker.waypoint&&!walker.walking;
-  wadeMesh.play(wadeClip(act,walker.walking,atChest));
+  let clip=wadeClip(act,walker.walking,atChest);
+  if(clip==='Idle') clip=idleClip(t);
+  wadeMesh.play(clip);
   wadeMesh.mixer.update(dt/1000);
   const gr=wadeMesh.gear;
   if(gr.rod) gr.rod.visible=act==='fish'&&walker.hasGear;
@@ -732,13 +785,14 @@ function frame(t){ t0=t;
   requestAnimationFrame(frame); }
 async function init(){
   await loadAssets();
-  buildIsland(); buildWater(); buildRocks(); buildPalms(); buildChest(); buildFirePit();
+  buildIsland(); buildWater(); buildRocks(); buildPalms(); buildGrassTufts(); buildChest(); buildFirePit();
   buildRaft(); buildCampDecor(); buildShark(); buildBirds(); buildClouds(); buildHorizonIsles();
   wadeMesh=buildWade();
   resize();
   requestAnimationFrame(frame); }
 init();
 
+</script>
 </script>
 <script>
 // ---------------- UI ----------------
