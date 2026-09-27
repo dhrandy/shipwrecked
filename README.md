@@ -2,8 +2,8 @@
 
 **One guy. One island. A story that keeps going while you're away.**
 
-Shipwrecked is a self-hosted web page starring Wade, a castaway on a tiny island
-with one palm tree (named Pal). It's a riff on the classic "story-telling
+Shipwrecked is a self-hosted web page starring Wade, a castaway on a little
+island with one palm tree (named Pal). It's a riff on the classic "story-telling
 screensaver" idea - day and night, weather, holidays, routines, and a slow
 story arc - but the whole world runs on your server, so Wade's story advances
 even when nobody has the page open. Come back after a day away and the page
@@ -14,8 +14,10 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 
 ## What Wade does
 
-- **Daily routines** - fishing, jogging, sandcastles, raft building, bottles
-  to the sea, stargazing, napping in the shade of Pal the palm.
+- **Daily routines** - fishing off the rocks, jogging, sandcastles, raft
+  building, bottles to the sea, stargazing, napping in the shade of Pal the
+  palm. His gear lives in the camp chest; the lid stands open while he's
+  using something.
 - **A brain, sort of** - Wade has needs (hunger, energy, mood, boredom,
   loneliness), a memory, opinions about the local wildlife, and a personality.
   Every few minutes he weighs his situation and *decides* what to do, commits
@@ -31,30 +33,47 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 - **Milestones** - his firsts (first fish, first bottle, raft complete) are
   detected from what actually happened and kept forever.
 
+The island itself got a texture pass in 0.4.0: a bigger beach with speckled
+sand and a wet waterline band, boulder clusters the gull perches on, reef
+patches and rolling lace foam in the shallows, a fuller palm, hazy islands on
+the horizon, and drifting clouds.
+
 ## Run it
 
 ```yaml
 services:
   shipwrecked:
-    build: https://github.com/dhrandy/shipwrecked.git#main
-    image: shipwrecked:0.3.2
+    image: ghcr.io/dhrandy/shipwrecked:0.4.0
     container_name: shipwrecked
     restart: unless-stopped
     ports:
       - "8647:8647"
     environment:
-      TZ: ${TZ:-America/New_York}
-      SIM_SPEED: ${SIM_SPEED:-1}
+      TZ: ${TZ}
+      SIM_SPEED: ${SIM_SPEED}
+      SHIPWRECKED_DB: ${SHIPWRECKED_DB}
     volumes:
       - shipwrecked-data:/data
 volumes:
   shipwrecked-data:
 ```
 
-Then open `http://your-server:8647`. Works on phones too.
+Create a `.env` file next to the compose file. Docker Compose reads it
+automatically. Copy this example and change the values for your setup:
 
-No .env file is needed. The `${VAR:-default}` values work as-is; change them
-in the compose file or in your Docker manager's environment settings.
+```dotenv
+TZ=America/New_York
+SIM_SPEED=1
+SHIPWRECKED_DB=/data/shipwrecked.db
+```
+
+Any tool that accepts a compose file works: paste the block into a new stack
+in Portainer, Dockhand, CasaOS, Synology Container Manager, or similar, and
+set the same variables in its Environment tab instead of a `.env` file. To
+build from source instead of pulling the image, swap the `image:` line for
+`build: https://github.com/dhrandy/shipwrecked.git#main`.
+
+Then open `http://your-server:8647`. Works on phones too.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -88,8 +107,9 @@ SHIPWRECKED_DB=/tmp/shipwrecked.db pytest -q         # runs the test suite
 
 ## Notes
 
-- Beta while it's still being tested. Versioning: `0.1.x` for fixes, `0.2.0`
-  for the next feature batch.
+- Beta while it's still being tested. Fixes bump the patch (`0.4.x`), feature
+  batches bump the minor (`0.x.0`). Images carry both the version tag and
+  `latest`.
 - The story survives restarts and container rebuilds (it's in the volume).
   Delete the volume to strand Wade all over again.
 - Nothing phones home; the page makes zero external requests.

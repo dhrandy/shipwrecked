@@ -53,3 +53,10 @@ def test_no_external_requests_in_page(client):
     assert "http://" not in html.replace("http://your-server", "")
     assert "https://" not in html
     assert "cdn" not in html.lower()
+
+
+def test_version_matches_docs():
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    assert appmod.VERSION in (root / "README.md").read_text()
+    assert f"shipwrecked:{appmod.VERSION}" in (root / "compose.yaml").read_text()
