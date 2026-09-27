@@ -1,6 +1,6 @@
 services:
   shipwrecked:
-    image: ghcr.io/dhrandy/shipwrecked:0.4.0
+    image: ghcr.io/dhrandy/shipwrecked:0.5.0
     # or build straight from the repo instead of pulling the image:
     # build: https://github.com/dhrandy/shipwrecked.git#main
     container_name: shipwrecked

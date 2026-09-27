@@ -33,17 +33,19 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 - **Milestones** - his firsts (first fish, first bottle, raft complete) are
   detected from what actually happened and kept forever.
 
-The island itself got a texture pass in 0.4.0: a bigger beach with speckled
-sand and a wet waterline band, boulder clusters the gull perches on, reef
-patches and rolling lace foam in the shallows, a fuller palm, hazy islands on
-the horizon, and drifting clouds.
+In 0.5.0 the renderer moved to Three.js (vendored, MIT): smooth-shaded dunes
+and palm, a real wave-water shader with a turquoise lagoon, breakers and foam
+lace, sky and horizon with drifting clouds and distant islands, sun, moon and
+stars, and Wade rebuilt as a smooth jointed character who actually WALKS
+between activities - gear runs route him to the camp chest, the lid opens,
+and the item comes out. All still procedural, still zero external requests.
 
 ## Run it
 
 ```yaml
 services:
   shipwrecked:
-    image: ghcr.io/dhrandy/shipwrecked:0.4.0
+    image: ghcr.io/dhrandy/shipwrecked:0.5.0
     container_name: shipwrecked
     restart: unless-stopped
     ports:
@@ -107,7 +109,7 @@ SHIPWRECKED_DB=/tmp/shipwrecked.db pytest -q         # runs the test suite
 
 ## Notes
 
-- Beta while it's still being tested. Fixes bump the patch (`0.4.x`), feature
+- Beta while it's still being tested. Fixes bump the patch (`0.5.x`), feature
   batches bump the minor (`0.x.0`). Images carry both the version tag and
   `latest`.
 - The story survives restarts and container rebuilds (it's in the volume).
