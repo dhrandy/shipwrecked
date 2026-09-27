@@ -39,6 +39,13 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 - **Milestones** - his firsts (first fish, first bottle, raft complete) are
   detected from what actually happened and kept forever.
 
+In 0.6.1 the island got its reference pass: Wade grew his dark curly hair
+and beard back, the surf stopped ringing the island like a river (breakers
+now arrive with the swell and break up into lace), both palms plant their
+trunks in the sand, his standing idle mixes in fidgets so it never loops,
+and the whole scene moved toward the reference's warm light - grassier top
+with ferns and grass tufts, richer greens, golden sun, soft shadows.
+
 In 0.6.0 the scene moved to real modeled assets: Wade is a KayKit character
 with a full animation rig - he idles, walks, jogs, sits to fish, lies down to
 sleep, picks things up, cheers at the horizon - and the island is dressed with
@@ -52,7 +59,7 @@ zero external requests: every asset is vendored in the image.
 ```yaml
 services:
   shipwrecked:
-    image: ghcr.io/dhrandy/shipwrecked:0.6.0
+    image: ghcr.io/dhrandy/shipwrecked:0.6.1
     container_name: shipwrecked
     restart: unless-stopped
     ports:
