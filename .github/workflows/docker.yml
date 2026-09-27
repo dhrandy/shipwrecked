@@ -34,7 +34,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest
-            type=raw,value=v0.5.0
+            type=raw,value=v0.6.0
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=One guy, one island, a story that keeps going while you are away. Self-hosted, no dependencies, one container.

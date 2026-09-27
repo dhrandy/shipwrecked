@@ -9,7 +9,13 @@ story arc - but the whole world runs on your server, so Wade's story advances
 even when nobody has the page open. Come back after a day away and the page
 catches you up on everything he got into.
 
-All art is drawn procedurally in the browser. There are no image assets, no
+The scene is built from real modeled glTF assets (loaded with Three.js
+GLTFLoader): Wade is the KayKit Adventurers Barbarian (CC0, by Kay Lousberg -
+kaylousberg.com), and the island props come from Quaternius (CC0 - palm trees,
+rocks, chest, coins, barrel, anchor, bottle, wood, shark, bird) and the Google
+Poly archive (CC-BY 3.0 - campfire, seashell, crab by Poly by Google; log raft
+by Adam Marc Williams). The island, ocean shader, sky, and small beach props
+are procedural. There are no tracking pixels, no
 external requests, and nothing here reuses anyone else's copyrighted work.
 
 ## What Wade does
@@ -33,19 +39,20 @@ external requests, and nothing here reuses anyone else's copyrighted work.
 - **Milestones** - his firsts (first fish, first bottle, raft complete) are
   detected from what actually happened and kept forever.
 
-In 0.5.0 the renderer moved to Three.js (vendored, MIT): smooth-shaded dunes
-and palm, a real wave-water shader with a turquoise lagoon, breakers and foam
-lace, sky and horizon with drifting clouds and distant islands, sun, moon and
-stars, and Wade rebuilt as a smooth jointed character who actually WALKS
-between activities - gear runs route him to the camp chest, the lid opens,
-and the item comes out. All still procedural, still zero external requests.
+In 0.6.0 the scene moved to real modeled assets: Wade is a KayKit character
+with a full animation rig - he idles, walks, jogs, sits to fish, lies down to
+sleep, picks things up, cheers at the horizon - and the island is dressed with
+Quaternius and Google Poly models (palms, rocks, chest, campfire, raft, shark
+and more). The ocean got traveling breakers that roll toward the beach, an
+animated wash, and a live contact line where the sea meets the sand. Still
+zero external requests: every asset is vendored in the image.
 
 ## Run it
 
 ```yaml
 services:
   shipwrecked:
-    image: ghcr.io/dhrandy/shipwrecked:0.5.0
+    image: ghcr.io/dhrandy/shipwrecked:0.6.0
     container_name: shipwrecked
     restart: unless-stopped
     ports:
@@ -109,7 +116,7 @@ SHIPWRECKED_DB=/tmp/shipwrecked.db pytest -q         # runs the test suite
 
 ## Notes
 
-- Beta while it's still being tested. Fixes bump the patch (`0.5.x`), feature
+- Beta while it's still being tested. Fixes bump the patch (`0.6.x`), feature
   batches bump the minor (`0.x.0`). Images carry both the version tag and
   `latest`. A version bump touches four places: `app.py` VERSION, the
   compose image tag, `.github/workflows/docker.yml` tags, and this README.
