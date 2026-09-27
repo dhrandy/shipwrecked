@@ -111,7 +111,8 @@ SHIPWRECKED_DB=/tmp/shipwrecked.db pytest -q         # runs the test suite
 
 - Beta while it's still being tested. Fixes bump the patch (`0.5.x`), feature
   batches bump the minor (`0.x.0`). Images carry both the version tag and
-  `latest`.
+  `latest`. A version bump touches four places: `app.py` VERSION, the
+  compose image tag, `.github/workflows/docker.yml` tags, and this README.
 - The story survives restarts and container rebuilds (it's in the volume).
   Delete the volume to strand Wade all over again.
 - Nothing phones home; the page makes zero external requests.
